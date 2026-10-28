@@ -832,23 +832,16 @@ export default function Home() {
             marginBottom: 22,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <div
-              style={{
-                width: 42,
-                height: 42,
-                borderRadius: 13,
-                display: "grid",
-                placeItems: "center",
-                background: "linear-gradient(135deg, #f2d675, #a87c18)",
-                color: "#100e08",
-                fontWeight: 900,
-                fontSize: 16,
-                boxShadow: "0 4px 25px rgba(212,175,55,0.15)",
-              }}
-            >
-              KL
-            </div>
+   <div
+  style={{
+    fontSize: 19,
+    fontWeight: 900,
+    letterSpacing: 1.1,
+    color: "#39ff88",
+  }}
+>
+  KeliLelibot
+</div>
 
             <div>
               <div
