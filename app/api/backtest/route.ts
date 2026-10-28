@@ -35,10 +35,7 @@ type Trade = {
   exitReason: ExitReason;
 };
 
-function envNumber(
-  name: string,
-  fallback: number
-): number {
+function envNumber(name: string, fallback: number): number {
   const raw = process.env[name];
 
   if (raw === undefined || raw.trim() === "") {
@@ -107,7 +104,7 @@ export async function GET() {
       );
     }
 
-    // Kostot jane te modeluara ne basis points per ane.
+    // Kostot modelohen ne basis points per ane.
     // 1 bps = 0.01% e vleres se pozicionit.
     const costBpsPerSide = envNumber("XAU_COST_BPS", 5);
     const slippageBpsPerSide = envNumber(
@@ -151,7 +148,6 @@ export async function GET() {
     let losses = 0;
     let breakeven = 0;
 
-    // Fitimi dhe humbja bruto ne para, para kostove.
     let grossProfitMoney = 0;
     let grossLossMoney = 0;
 
@@ -168,10 +164,7 @@ export async function GET() {
           ? ((peakEquity - equity) / peakEquity) * 100
           : 0;
 
-      maxDrawdownPct = Math.max(
-        maxDrawdownPct,
-        drawdown
-      );
+      maxDrawdownPct = Math.max(maxDrawdownPct, drawdown);
     }
 
     function closePosition(
@@ -191,30 +184,24 @@ export async function GET() {
         );
       }
 
-      // Slippage aplikohet ne drejtimin e pafavorshem.
+      // Slippage ne dalje aplikohet kunder pozicionit.
       const exitPrice =
         rawExitPrice *
-        (1 -
-          position *
-            (slippageBpsPerSide / 10000));
+        (1 - position * (slippageBpsPerSide / 10000));
 
       const grossPct =
-        (position * (rawExitPrice - entryPrice) /
+        ((position * (rawExitPrice - entryPrice)) /
           entryPrice) *
         100;
 
-      // Kosto per hapje dhe mbyllje, si perqindje e cmimit.
       const tradingCostPct =
         (totalCostBpsPerRoundTrip / 10000) * 100;
 
       const netPct = grossPct - tradingCostPct;
       const previousEquity = equity;
 
-      const grossMoney =
-        previousEquity * (grossPct / 100);
-
-      const netMoney =
-        previousEquity * (netPct / 100);
+      const grossMoney = previousEquity * (grossPct / 100);
+      const netMoney = previousEquity * (netPct / 100);
 
       equity = previousEquity + netMoney;
 
@@ -288,7 +275,7 @@ export async function GET() {
         return;
       }
 
-      // Slippage ne hyrje eshte gjithmone kunder pozicionit.
+      // Slippage ne hyrje aplikohet kunder pozicionit.
       entryPrice =
         rawEntryPrice *
         (1 + side * (slippageBpsPerSide / 10000));
@@ -296,10 +283,8 @@ export async function GET() {
       entryTime = time;
       position = side;
 
-      const stopDistance =
-        atr * stopLossATRMultiplier;
-      const targetDistance =
-        stopDistance * riskReward;
+      const stopDistance = atr * stopLossATRMultiplier;
+      const targetDistance = stopDistance * riskReward;
 
       if (side === 1) {
         stopLossPrice = entryPrice - stopDistance;
@@ -310,11 +295,7 @@ export async function GET() {
       }
     }
 
-    for (
-      let i = 200;
-      i < candles.length - 1;
-      i++
-    ) {
+    for (let i = 205; i < candles.length - 1; i++) {
       const signal = analysis.signalAt(i);
 
       const desiredPosition: Position =
@@ -324,8 +305,8 @@ export async function GET() {
             ? -1
             : 0;
 
-      // Sinjali nga qiriu i mbyllur i perdorur ketu
-      // ekzekutohet ne hapjen e qiriut pasues.
+      // Sinjali nga qiriu i mbyllur ekzekutohet ne
+      // hapjen e qiriut pasues.
       const executionCandle = candles[i + 1];
       const executionPrice = executionCandle.open;
       const executionTime = executionCandle.datetime;
@@ -339,12 +320,17 @@ export async function GET() {
           );
         }
 
-        if (desiredPosition !== 0) {
+        // Kontrollo sinjalin origjinal, jo krahasimin
+        // e tipit Position me vleren 0.
+        if (signal === "BUY" || signal === "SELL") {
           const atr = atrSeries[i];
 
           if (atr !== null && atr > 0) {
+            const side: Position =
+              signal === "BUY" ? 1 : -1;
+
             openPosition(
-              desiredPosition,
+              side,
               executionPrice,
               executionTime,
               atr
@@ -355,8 +341,7 @@ export async function GET() {
 
       if (position === 0) continue;
 
-      // Nese tregu hapet pertej SL/TP, modelojme
-      // daljen me cmimin e hapjes kur ai eshte me i keq.
+      // Nese hapja kalon SL/TP, perdor cmimin e hapjes.
       const gapThroughStop =
         position === 1
           ? executionCandle.open <= stopLossPrice
@@ -395,8 +380,8 @@ export async function GET() {
           ? executionCandle.high >= takeProfitPrice
           : executionCandle.low <= takeProfitPrice;
 
-      // Me te dhenat OHLC nuk dime cila u prek e para.
-      // Supozim konservator: SL i pari.
+      // Kur te dyja preken ne te njejtin qiri,
+      // perdor supozimin konservator: SL i pari.
       if (hitStop && hitTarget) {
         closePosition(
           stopLossPrice,
@@ -425,7 +410,6 @@ export async function GET() {
     }
 
     const totalTrades = trades.length;
-
     const netProfit = equity - initialCapital;
     const netReturnPct =
       (netProfit / initialCapital) * 100;
@@ -477,10 +461,7 @@ export async function GET() {
 
         grossProfit: round(grossProfitMoney),
         grossLoss: round(grossLossMoney),
-        averageNetTradePct: round(
-          averageNetTradePct,
-          4
-        ),
+        averageNetTradePct: round(averageNetTradePct, 4),
         maxDrawdownPct: round(maxDrawdownPct),
 
         costBpsPerSide,
