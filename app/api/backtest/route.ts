@@ -12,8 +12,10 @@ export const revalidate = 0;
 type Position = 1 | -1 | 0;
 type TradeResult = "WIN" | "LOSS" | "BREAKEVEN";
 type ExitReason =
-  | "SIGNAL"
   | "STOP_LOSS"
+  | "TP1_THEN_STOP_LOSS"
+  | "TP1_THEN_TP2"
+  | "TP1_THEN_END"
   | "TAKE_PROFIT"
   | "END";
 
@@ -32,15 +34,16 @@ type Trade = {
   result: TradeResult;
   stopLoss: number;
   takeProfit: number;
+  takeProfit1: number;
+  takeProfit2: number;
+  tp1Hit: boolean;
   exitReason: ExitReason;
 };
 
 function envNumber(name: string, fallback: number): number {
   const raw = process.env[name];
 
-  if (raw === undefined || raw.trim() === "") {
-    return fallback;
-  }
+  if (raw === undefined || raw.trim() === "") return fallback;
 
   return Number(raw);
 }
@@ -60,10 +63,7 @@ export async function GET() {
   }
 
   try {
-    const url = new URL(
-      "https://api.twelvedata.com/time_series"
-    );
-
+    const url = new URL("https://api.twelvedata.com/time_series");
     url.searchParams.set("symbol", "XAU/USD");
     url.searchParams.set("interval", "5min");
     url.searchParams.set("outputsize", "500");
@@ -104,13 +104,8 @@ export async function GET() {
       );
     }
 
-    // Kostot modelohen ne basis points per ane.
-    // 1 bps = 0.01% e vleres se pozicionit.
     const costBpsPerSide = envNumber("XAU_COST_BPS", 5);
-    const slippageBpsPerSide = envNumber(
-      "XAU_SLIPPAGE_BPS",
-      1
-    );
+    const slippageBpsPerSide = envNumber("XAU_SLIPPAGE_BPS", 1);
 
     if (
       !Number.isFinite(costBpsPerSide) ||
@@ -128,8 +123,10 @@ export async function GET() {
     }
 
     const initialCapital = 1000;
-    const riskReward = 2;
     const stopLossATRMultiplier = 1.5;
+    const tp1RiskReward = 1;
+    const tp2RiskReward = 2;
+    const tp1CloseFraction = 0.5;
 
     const analysis = analyzeCandles(candles);
     const atrSeries = calculateATR(candles, 14);
@@ -142,11 +139,17 @@ export async function GET() {
     let entryPrice = 0;
     let entryTime = "";
     let stopLossPrice = 0;
-    let takeProfitPrice = 0;
+    let takeProfit1Price = 0;
+    let takeProfit2Price = 0;
+    let tp1Hit = false;
+    let tp1GrossPct = 0;
+    let tp1Time = "";
 
     let wins = 0;
     let losses = 0;
     let breakeven = 0;
+    let tp1Hits = 0;
+    let tp2Hits = 0;
 
     let grossProfitMoney = 0;
     let grossLossMoney = 0;
@@ -167,6 +170,18 @@ export async function GET() {
       maxDrawdownPct = Math.max(maxDrawdownPct, drawdown);
     }
 
+    function resetPosition() {
+      position = 0;
+      entryPrice = 0;
+      entryTime = "";
+      stopLossPrice = 0;
+      takeProfit1Price = 0;
+      takeProfit2Price = 0;
+      tp1Hit = false;
+      tp1GrossPct = 0;
+      tp1Time = "";
+    }
+
     function closePosition(
       rawExitPrice: number,
       exitTime: string,
@@ -179,31 +194,28 @@ export async function GET() {
         rawExitPrice <= 0 ||
         entryPrice <= 0
       ) {
-        throw new Error(
-          "Cmimi i hyrjes ose daljes nuk eshte valid."
-        );
+        throw new Error("Cmimi i hyrjes ose daljes nuk eshte valid.");
       }
 
-      // Slippage ne dalje aplikohet kunder pozicionit.
-      const exitPrice =
-        rawExitPrice *
-        (1 - position * (slippageBpsPerSide / 10000));
+      const remainingFraction = tp1Hit ? 1 - tp1CloseFraction : 1;
 
-      const grossPct =
-        ((position * (rawExitPrice - entryPrice)) /
-          entryPrice) *
-        100;
+      const finalGrossPct =
+        ((position * (rawExitPrice - entryPrice)) / entryPrice) * 100;
 
+      const combinedGrossPct =
+        tp1Hit
+          ? tp1GrossPct * tp1CloseFraction +
+            finalGrossPct * remainingFraction
+          : finalGrossPct;
+
+      // Kostot perfshijne hyrjen dhe daljen; supozim i thjeshtuar.
       const tradingCostPct =
         (totalCostBpsPerRoundTrip / 10000) * 100;
 
-      const netPct = grossPct - tradingCostPct;
-      const previousEquity = equity;
+      const netPct = combinedGrossPct - tradingCostPct;
+      const netMoney = equity * (netPct / 100);
 
-      const grossMoney = previousEquity * (grossPct / 100);
-      const netMoney = previousEquity * (netPct / 100);
-
-      equity = previousEquity + netMoney;
+      equity += netMoney;
 
       const result: TradeResult =
         netPct > 0.000001
@@ -222,41 +234,38 @@ export async function GET() {
         breakeven++;
       }
 
+      const adjustedExitPrice =
+        rawExitPrice *
+        (1 - position * (slippageBpsPerSide / 10000));
+
       trades.push({
         side: position === 1 ? "BUY" : "SELL",
         entry: round(entryPrice, 3),
-        exit: round(exitPrice, 3),
+        exit: round(adjustedExitPrice, 3),
         entryPrice: round(entryPrice, 3),
-        exitPrice: round(exitPrice, 3),
+        exitPrice: round(adjustedExitPrice, 3),
         entryTime,
         exitTime,
-        grossReturnPct: round(grossPct, 4),
+        grossReturnPct: round(combinedGrossPct, 4),
         netReturnPct: round(netPct, 4),
         netPct: round(netPct, 4),
         netProfit: round(netMoney, 2),
         result,
         stopLoss: round(stopLossPrice, 3),
-        takeProfit: round(takeProfitPrice, 3),
+        takeProfit: round(takeProfit2Price, 3),
+        takeProfit1: round(takeProfit1Price, 3),
+        takeProfit2: round(takeProfit2Price, 3),
+        tp1Hit,
         exitReason,
       });
 
       updateDrawdown();
 
-      if (
-        !Number.isFinite(equity) ||
-        equity <= 0 ||
-        !Number.isFinite(grossMoney)
-      ) {
-        throw new Error(
-          "Kapitali u be jo valid gjate backtest-it."
-        );
+      if (!Number.isFinite(equity) || equity <= 0) {
+        throw new Error("Kapitali u be jo valid gjate backtest-it.");
       }
 
-      position = 0;
-      entryPrice = 0;
-      entryTime = "";
-      stopLossPrice = 0;
-      takeProfitPrice = 0;
+      resetPosition();
     }
 
     function openPosition(
@@ -275,7 +284,6 @@ export async function GET() {
         return;
       }
 
-      // Slippage ne hyrje aplikohet kunder pozicionit.
       entryPrice =
         rawEntryPrice *
         (1 + side * (slippageBpsPerSide / 10000));
@@ -284,53 +292,45 @@ export async function GET() {
       position = side;
 
       const stopDistance = atr * stopLossATRMultiplier;
-      const targetDistance = stopDistance * riskReward;
+      const tp1Distance = stopDistance * tp1RiskReward;
+      const tp2Distance = stopDistance * tp2RiskReward;
 
       if (side === 1) {
         stopLossPrice = entryPrice - stopDistance;
-        takeProfitPrice = entryPrice + targetDistance;
+        takeProfit1Price = entryPrice + tp1Distance;
+        takeProfit2Price = entryPrice + tp2Distance;
       } else {
         stopLossPrice = entryPrice + stopDistance;
-        takeProfitPrice = entryPrice - targetDistance;
+        takeProfit1Price = entryPrice - tp1Distance;
+        takeProfit2Price = entryPrice - tp2Distance;
       }
+
+      tp1Hit = false;
+      tp1GrossPct = 0;
+      tp1Time = "";
     }
 
     for (let i = 205; i < candles.length - 1; i++) {
       const signal = analysis.signalAt(i);
 
       const desiredPosition: Position =
-        signal === "BUY"
-          ? 1
-          : signal === "SELL"
-            ? -1
-            : 0;
+        signal === "BUY" ? 1 : signal === "SELL" ? -1 : 0;
 
-      // Sinjali nga qiriu i mbyllur ekzekutohet ne
-      // hapjen e qiriut pasues.
       const executionCandle = candles[i + 1];
       const executionPrice = executionCandle.open;
       const executionTime = executionCandle.datetime;
 
       if (desiredPosition !== position) {
         if (position !== 0) {
-          closePosition(
-            executionPrice,
-            executionTime,
-            "SIGNAL"
-          );
+          closePosition(executionPrice, executionTime, "END");
         }
 
-        // Kontrollo sinjalin origjinal, jo krahasimin
-        // e tipit Position me vleren 0.
         if (signal === "BUY" || signal === "SELL") {
           const atr = atrSeries[i];
 
           if (atr !== null && atr > 0) {
-            const side: Position =
-              signal === "BUY" ? 1 : -1;
-
             openPosition(
-              side,
+              signal === "BUY" ? 1 : -1,
               executionPrice,
               executionTime,
               atr
@@ -341,33 +341,52 @@ export async function GET() {
 
       if (position === 0) continue;
 
-      // Nese hapja kalon SL/TP, perdor cmimin e hapjes.
       const gapThroughStop =
         position === 1
           ? executionCandle.open <= stopLossPrice
           : executionCandle.open >= stopLossPrice;
 
-      const gapThroughTarget =
-        position === 1
-          ? executionCandle.open >= takeProfitPrice
-          : executionCandle.open <= takeProfitPrice;
-
       if (gapThroughStop) {
         closePosition(
           executionCandle.open,
           executionTime,
-          "STOP_LOSS"
+          tp1Hit ? "TP1_THEN_STOP_LOSS" : "STOP_LOSS"
         );
         continue;
       }
 
-      if (gapThroughTarget) {
-        closePosition(
-          executionCandle.open,
-          executionTime,
-          "TAKE_PROFIT"
-        );
+      const gapThroughTP1 =
+        !tp1Hit &&
+        (position === 1
+          ? executionCandle.open >= takeProfit1Price
+          : executionCandle.open <= takeProfit1Price);
+
+      const gapThroughTP2 =
+        position === 1
+          ? executionCandle.open >= takeProfit2Price
+          : executionCandle.open <= takeProfit2Price;
+
+      if (gapThroughTP2) {
+        if (!tp1Hit) {
+          tp1Hit = true;
+          tp1Hits++;
+          tp2Hits++;
+          tp1GrossPct =
+            ((position * (takeProfit1Price - entryPrice)) / entryPrice) * 100;
+          closePosition(executionCandle.open, executionTime, "TP1_THEN_TP2");
+        } else {
+          tp2Hits++;
+          closePosition(executionCandle.open, executionTime, "TP1_THEN_TP2");
+        }
         continue;
+      }
+
+      if (gapThroughTP1 && !tp1Hit) {
+        tp1Hit = true;
+        tp1Hits++;
+        tp1Time = executionTime;
+        tp1GrossPct =
+          ((position * (takeProfit1Price - entryPrice)) / entryPrice) * 100;
       }
 
       const hitStop =
@@ -375,44 +394,76 @@ export async function GET() {
           ? executionCandle.low <= stopLossPrice
           : executionCandle.high >= stopLossPrice;
 
-      const hitTarget =
-        position === 1
-          ? executionCandle.high >= takeProfitPrice
-          : executionCandle.low <= takeProfitPrice;
+      const hitTP1 =
+        !tp1Hit &&
+        (position === 1
+          ? executionCandle.high >= takeProfit1Price
+          : executionCandle.low <= takeProfit1Price);
 
-      // Kur te dyja preken ne te njejtin qiri,
-      // perdor supozimin konservator: SL i pari.
-      if (hitStop && hitTarget) {
+      const hitTP2 =
+        position === 1
+          ? executionCandle.high >= takeProfit2Price
+          : executionCandle.low <= takeProfit2Price;
+
+      // Nese SL dhe objektivi i pare preken ne te njejtin qiri,
+      // supozohet SL i pari. Ky eshte vleresim konservator.
+      if (hitStop && !tp1Hit && hitTP1) {
+        closePosition(executionCandle.open, executionTime, "STOP_LOSS");
+        continue;
+      }
+
+      if (hitStop && hitTP2) {
         closePosition(
           stopLossPrice,
           executionTime,
-          "STOP_LOSS"
+          tp1Hit ? "TP1_THEN_STOP_LOSS" : "STOP_LOSS"
         );
-      } else if (hitStop) {
+        continue;
+      }
+
+      if (hitStop) {
         closePosition(
           stopLossPrice,
           executionTime,
-          "STOP_LOSS"
+          tp1Hit ? "TP1_THEN_STOP_LOSS" : "STOP_LOSS"
         );
-      } else if (hitTarget) {
-        closePosition(
-          takeProfitPrice,
-          executionTime,
-          "TAKE_PROFIT"
-        );
+        continue;
+      }
+
+      if (hitTP1 && !tp1Hit) {
+        tp1Hit = true;
+        tp1Hits++;
+        tp1Time = executionTime;
+        tp1GrossPct =
+          ((position * (takeProfit1Price - entryPrice)) / entryPrice) * 100;
+      }
+
+      if (hitTP2) {
+        if (!tp1Hit) {
+          tp1Hit = true;
+          tp1Hits++;
+          tp1GrossPct =
+            ((position * (takeProfit1Price - entryPrice)) / entryPrice) * 100;
+        }
+
+        tp2Hits++;
+        closePosition(takeProfit2Price, executionTime, "TP1_THEN_TP2");
       }
     }
 
     const last = candles[candles.length - 1];
 
     if (position !== 0) {
-      closePosition(last.close, last.datetime, "END");
+      closePosition(
+        last.close,
+        last.datetime,
+        tp1Hit ? "TP1_THEN_END" : "END"
+      );
     }
 
     const totalTrades = trades.length;
     const netProfit = equity - initialCapital;
-    const netReturnPct =
-      (netProfit / initialCapital) * 100;
+    const netReturnPct = (netProfit / initialCapital) * 100;
 
     const profitFactor =
       grossLossMoney > 0
@@ -423,10 +474,8 @@ export async function GET() {
 
     const averageNetTradePct =
       totalTrades > 0
-        ? trades.reduce(
-            (sum, trade) => sum + trade.netReturnPct,
-            0
-          ) / totalTrades
+        ? trades.reduce((sum, trade) => sum + trade.netReturnPct, 0) /
+          totalTrades
         : 0;
 
     return NextResponse.json(
@@ -449,15 +498,15 @@ export async function GET() {
         losses,
         breakeven,
 
+        tp1Hits,
+        tp2Hits,
+        tp1CloseFraction: tp1CloseFraction * 100,
+
         winRatePct:
-          totalTrades > 0
-            ? round((wins / totalTrades) * 100)
-            : 0,
+          totalTrades > 0 ? round((wins / totalTrades) * 100) : 0,
 
         profitFactor:
-          profitFactor === null
-            ? null
-            : round(profitFactor, 3),
+          profitFactor === null ? null : round(profitFactor, 3),
 
         grossProfit: round(grossProfitMoney),
         grossLoss: round(grossLossMoney),
@@ -466,21 +515,20 @@ export async function GET() {
 
         costBpsPerSide,
         slippageBpsPerSide,
-        estimatedRoundTripCostBps:
-          totalCostBpsPerRoundTrip,
+        estimatedRoundTripCostBps: totalCostBpsPerRoundTrip,
 
         stopLossATRMultiplier,
-        takeProfitRiskReward: riskReward,
+        tp1RiskReward,
+        tp2RiskReward,
 
         trades,
 
         disclaimer:
-          "Backtest historik, jo garanci fitimi. Kostot dhe slippage jane supozime, jo kuotime te matura nga brokeri. Nuk perfshihen komisionet specifike te brokerit, financimi overnight ose ekzekutimi real. Nese SL dhe TP preken brenda te njejtit qiri, llogaritet SL i pari.",
+          "Backtest historik, jo garanci fitimi. TP1 mbyll 50% te pozicionit dhe TP2 synon pjesen e mbetur. Kostot dhe slippage jane supozime. Qirinjte 5-minutesh nuk tregojne gjithmone rendin e sakte te prekjes se niveleve; rezultatet jane vleresime.",
       },
       {
         headers: {
-          "Cache-Control":
-            "no-store, no-cache, must-revalidate",
+          "Cache-Control": "no-store, no-cache, must-revalidate",
         },
       }
     );
