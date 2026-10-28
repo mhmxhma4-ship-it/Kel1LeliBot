@@ -1,38 +1,29 @@
-
 import { NextResponse } from "next/server";
 import { analyzeCandles, parseCandles } from "@/lib/strategy";
-
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
-
 function roundToTwo(value: number | null): number | null {
   if (value === null || !Number.isFinite(value)) return null;
   return Number(value.toFixed(2));
 }
-
 export async function GET() {
   const apiKey = process.env.TWELVE_DATA_API_KEY;
-
   if (!apiKey) {
     return NextResponse.json(
       { error: "Mungon TWELVE_DATA_API_KEY ne variablat e mjedisit." },
       { status: 503 }
     );
   }
-
   try {
     const url = new URL("https://api.twelvedata.com/time_series");
     url.searchParams.set("symbol", "XAU/USD");
-    url.searchParams.set("interval", "1min");
+    url.searchParams.set("interval", "5min");
     url.searchParams.set("outputsize", "500");
     url.searchParams.set("apikey", apiKey);
-
     const response = await fetch(url.toString(), {
       cache: "no-store",
     });
-
     const data = await response.json();
-
     if (
       !response.ok ||
       data.status === "error" ||
@@ -48,9 +39,7 @@ export async function GET() {
         { status: 502 }
       );
     }
-
     const candles = parseCandles(data.values);
-
     if (candles.length < 220) {
       return NextResponse.json(
         {
@@ -60,30 +49,34 @@ export async function GET() {
         { status: 422 }
       );
     }
-
     const orderedCandles = [...candles].sort(
-      (a, b) =>
-        Date.parse(a.datetime) - Date.parse(b.datetime)
+      (a, b) => Date.parse(a.datetime) - Date.parse(b.datetime)
     );
-
     const result = analyzeCandles(orderedCandles);
-
     return NextResponse.json(
       {
         symbol: "XAU/USD",
         ...result,
+        price: roundToTwo(result.price),
+        stopLoss: roundToTwo(result.stopLoss),
+        takeProfit1: roundToTwo(result.takeProfit1),
+        takeProfit2: roundToTwo(result.takeProfit2),
+        takeProfit: roundToTwo(result.takeProfit),
         ema9: roundToTwo(result.ema9),
         ema21: roundToTwo(result.ema21),
         ema200: roundToTwo(result.ema200),
+        rsi: roundToTwo(result.rsi),
+        atr: roundToTwo(result.atr),
         candlesReceived: orderedCandles.length,
-        interval: "1min",
+        interval: "5min",
         updatedAt: new Date().toISOString(),
         latestCandleAt:
           orderedCandles[orderedCandles.length - 1].datetime,
       },
       {
         headers: {
-          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          "Cache-Control":
+            "no-store, no-cache, must-revalidate, proxy-revalidate",
           Pragma: "no-cache",
           Expires: "0",
         },
