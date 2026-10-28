@@ -3,65 +3,452 @@
 
 import { useCallback, useEffect, useState } from "react";
 
-type Signal = {
-  symbol?: string;
-  signal?: string;
-  action?: string;
-  price?: number | string;
-  close?: number | string;
-  rsi?: number | string;
-  ema9?: number | string;
-  ema21?: number | string;
-  ema200?: number | string;
-  timestamp?: string;
-  time?: string;
-  reason?: string;
-  error?: string;
-  [key: string]: unknown;
+type Lang =
+  | "sq" | "en" | "el" | "it" | "es" | "pt" | "fr"
+  | "de" | "tr" | "ar" | "ru" | "pt-BR" | "ja" | "zh";
+
+type Data = Record<string, any>;
+
+const languages: { code: Lang; name: string; flag: string }[] = [
+  { code: "sq", name: "Shqip", flag: "🇦🇱" },
+  { code: "en", name: "English", flag: "🇬🇧" },
+  { code: "el", name: "Ελληνικά", flag: "🇬🇷" },
+  { code: "it", name: "Italiano", flag: "🇮🇹" },
+  { code: "es", name: "Español", flag: "🇪🇸" },
+  { code: "pt", name: "Português", flag: "🇵🇹" },
+  { code: "fr", name: "Français", flag: "🇫🇷" },
+  { code: "de", name: "Deutsch", flag: "🇩🇪" },
+  { code: "tr", name: "Türkçe", flag: "🇹🇷" },
+  { code: "ar", name: "العربية", flag: "🇸🇦" },
+  { code: "ru", name: "Русский", flag: "🇷🇺" },
+  { code: "pt-BR", name: "Português (Brasil)", flag: "🇧🇷" },
+  { code: "ja", name: "日本語", flag: "🇯🇵" },
+  { code: "zh", name: "中文", flag: "🇨🇳" },
+];
+
+const en: Record<string, string> = {
+  menu: "Menu",
+  language: "Language",
+  timezone: "Time zone",
+  chooseLanguage: "Choose language",
+  chooseZone: "Choose time zone",
+  done: "Done",
+  active: "System active",
+  auto: "Auto-refresh every 60 seconds",
+  currentSignal: "Current signal",
+  marketAnalysis: "Latest market analysis",
+  currentPrice: "CURRENT PRICE",
+  buySignal: "Buy signal",
+  sellSignal: "Sell signal",
+  waiting: "Waiting for a setup",
+  loading: "Loading...",
+  refreshSignal: "Refresh signal",
+  performance: "Performance",
+  backtest: "Automatic backtest",
+  strategyStats: "Strategy statistics",
+  recalculate: "Recalculate",
+  trades: "Trades",
+  winRate: "Win rate",
+  profitFactor: "Profit factor",
+  netReturn: "Net return",
+  drawdown: "Max drawdown",
+  finalCapital: "Final capital",
+  startingCapital: "STARTING CAPITAL",
+  lastBacktest: "LAST BACKTEST",
+  history: "History",
+  recentTrades: "Recent trades",
+  direction: "Direction",
+  entry: "Entry",
+  entryTime: "Entry time",
+  exit: "Exit",
+  exitTime: "Exit time",
+  result: "Result",
+  return: "Return",
+  noTrades: "No trades to display",
+  reason: "Reason",
+  signalTime: "Signal time",
+  updated: "Updated",
+  localTime: "Local time",
+  activeZone: "ACTIVE TIME ZONE",
+  shortTerm: "Short term",
+  mediumTerm: "Medium term",
+  trend: "Trend",
+  buy: "BUY",
+  sell: "SELL",
+  wait: "WAIT",
+  win: "WIN",
+  loss: "LOSS",
+  breakeven: "BREAKEVEN",
+  errorSignal: "Signal error",
+  errorBacktest: "Backtest error",
+  loadingStats: "Calculating...",
+  noSignal: "No signal data available",
+  systemTime: "Clock updates automatically",
 };
 
-type Trade = {
-  side?: string;
-  entry?: number;
-  exit?: number;
-  entryPrice?: number;
-  exitPrice?: number;
-  entryTime?: string;
-  exitTime?: string;
-  pnlPct?: number;
-  netPct?: number;
-  netReturnPct?: number;
-  pnl?: number;
-  profit?: number;
-  result?: string;
-  [key: string]: unknown;
-};
-
-type Backtest = {
-  error?: string;
-  symbol?: string;
-  totalTrades?: number;
-  tradesCount?: number;
-  wins?: number;
-  losses?: number;
-  winRate?: number;
-  winRatePct?: number;
-  profitFactor?: number;
-  netProfitPct?: number;
-  netReturnPct?: number;
-  totalReturnPct?: number;
-  startingCapital?: number;
-  initialCapital?: number;
-  finalCapital?: number;
-  maxDrawdownPct?: number;
-  trades?: Trade[];
-  [key: string]: unknown;
+const translations: Partial<Record<Lang, Record<string, string>>> = {
+  sq: {
+    menu: "Menuja", language: "Gjuha", timezone: "Zona kohore",
+    chooseLanguage: "Zgjidh gjuhen", chooseZone: "Zgjidh zonen kohore",
+    done: "U krye", active: "Sistemi aktiv",
+    auto: "Rifreskim automatik cdo 60 sekonda",
+    currentSignal: "Sinjali aktual", marketAnalysis: "Analiza e fundit e tregut",
+    currentPrice: "CMIMI AKTUAL", buySignal: "Sinjal per blerje",
+    sellSignal: "Sinjal per shitje", waiting: "Ne pritje te nje konfigurimi",
+    loading: "Duke ngarkuar...", refreshSignal: "Rifresko sinjalin",
+    performance: "Performanca", backtest: "Backtest automatik",
+    strategyStats: "Statistikat e strategjise", recalculate: "Rillogarit",
+    trades: "Tregtime", winRate: "Win rate", profitFactor: "Profit factor",
+    netReturn: "Kthimi neto", drawdown: "Max drawdown",
+    finalCapital: "Kapitali final", startingCapital: "KAPITALI FILLESTAR",
+    lastBacktest: "BACKTEST-I I FUNDIT", history: "Historiku",
+    recentTrades: "Tregtimet e fundit", direction: "Drejtimi",
+    entry: "Hyrja", entryTime: "Ora e hyrjes", exit: "Dalja",
+    exitTime: "Ora e daljes", result: "Rezultati", return: "Kthimi",
+    noTrades: "Nuk ka tregtime per tu shfaqur", reason: "Arsyeja",
+    signalTime: "Koha e sinjalit", updated: "Perditesuar",
+    localTime: "Ora lokale", activeZone: "ZONA KOHORE AKTIVE",
+    shortTerm: "Afatshkurter", mediumTerm: "Afatmesem", trend: "Tendenca",
+    buy: "BLERJE", sell: "SHITJE", wait: "NE PRITJE",
+    win: "FITORE", loss: "HUMBJE", breakeven: "BARAZIM",
+    errorSignal: "Gabim sinjali", errorBacktest: "Gabim backtest-i",
+    loadingStats: "Duke llogaritur...", noSignal: "Nuk ka te dhena per sinjalin",
+    systemTime: "Ora perditesohet automatikisht",
+  },
+  el: {
+    menu: "Μενού", language: "Γλώσσα", timezone: "Ζώνη ώρας",
+    chooseLanguage: "Επιλογή γλώσσας", chooseZone: "Επιλογή ζώνης ώρας",
+    done: "Έγινε", active: "Το σύστημα είναι ενεργό",
+    auto: "Αυτόματη ανανέωση κάθε 60 δευτερόλεπτα",
+    currentSignal: "Τρέχον σήμα", marketAnalysis: "Τελευταία ανάλυση αγοράς",
+    currentPrice: "ΤΡΕΧΟΥΣΑ ΤΙΜΗ", buySignal: "Σήμα αγοράς",
+    sellSignal: "Σήμα πώλησης", waiting: "Αναμονή για ευκαιρία",
+    loading: "Φόρτωση...", refreshSignal: "Ανανέωση σήματος",
+    performance: "Απόδοση", backtest: "Αυτόματο backtest",
+    strategyStats: "Στατιστικά στρατηγικής", recalculate: "Επανυπολογισμός",
+    trades: "Συναλλαγές", winRate: "Ποσοστό επιτυχίας",
+    profitFactor: "Συντελεστής κέρδους", netReturn: "Καθαρή απόδοση",
+    drawdown: "Μέγιστη πτώση", finalCapital: "Τελικό κεφάλαιο",
+    startingCapital: "ΑΡΧΙΚΟ ΚΕΦΑΛΑΙΟ", lastBacktest: "ΤΕΛΕΥΤΑΙΟ BACKTEST",
+    history: "Ιστορικό", recentTrades: "Πρόσφατες συναλλαγές",
+    direction: "Κατεύθυνση", entry: "Είσοδος", entryTime: "Ώρα εισόδου",
+    exit: "Έξοδος", exitTime: "Ώρα εξόδου", result: "Αποτέλεσμα",
+    return: "Απόδοση", noTrades: "Δεν υπάρχουν συναλλαγές",
+    reason: "Αιτία", signalTime: "Ώρα σήματος", updated: "Ενημερώθηκε",
+    localTime: "Τοπική ώρα", activeZone: "ΕΝΕΡΓΗ ΖΩΝΗ ΩΡΑΣ",
+    shortTerm: "Βραχυπρόθεσμα", mediumTerm: "Μεσοπρόθεσμα", trend: "Τάση",
+    buy: "ΑΓΟΡΑ", sell: "ΠΩΛΗΣΗ", wait: "ΑΝΑΜΟΝΗ",
+    win: "ΚΕΡΔΟΣ", loss: "ΖΗΜΙΑ", breakeven: "ΙΣΟΠΑΛΙΑ",
+    errorSignal: "Σφάλμα σήματος", errorBacktest: "Σφάλμα backtest",
+    loadingStats: "Υπολογισμός...", noSignal: "Δεν υπάρχουν δεδομένα σήματος",
+    systemTime: "Το ρολόι ενημερώνεται αυτόματα",
+  },
+  it: {
+    menu: "Menu", language: "Lingua", timezone: "Fuso orario",
+    chooseLanguage: "Scegli la lingua", chooseZone: "Scegli il fuso orario",
+    done: "Fatto", active: "Sistema attivo",
+    auto: "Aggiornamento automatico ogni 60 secondi",
+    currentSignal: "Segnale attuale", marketAnalysis: "Ultima analisi di mercato",
+    currentPrice: "PREZZO ATTUALE", buySignal: "Segnale di acquisto",
+    sellSignal: "Segnale di vendita", waiting: "In attesa di un segnale",
+    loading: "Caricamento...", refreshSignal: "Aggiorna segnale",
+    performance: "Prestazioni", backtest: "Backtest automatico",
+    strategyStats: "Statistiche della strategia", recalculate: "Ricalcola",
+    trades: "Operazioni", winRate: "Percentuale vincite",
+    profitFactor: "Fattore di profitto", netReturn: "Rendimento netto",
+    drawdown: "Drawdown massimo", finalCapital: "Capitale finale",
+    startingCapital: "CAPITALE INIZIALE", lastBacktest: "ULTIMO BACKTEST",
+    history: "Cronologia", recentTrades: "Operazioni recenti",
+    direction: "Direzione", entry: "Entrata", entryTime: "Ora di entrata",
+    exit: "Uscita", exitTime: "Ora di uscita", result: "Risultato",
+    return: "Rendimento", noTrades: "Nessuna operazione da mostrare",
+    reason: "Motivo", signalTime: "Ora del segnale", updated: "Aggiornato",
+    localTime: "Ora locale", activeZone: "FUSO ORARIO ATTIVO",
+    shortTerm: "Breve termine", mediumTerm: "Medio termine", trend: "Tendenza",
+    buy: "ACQUISTA", sell: "VENDI", wait: "ATTENDI",
+    win: "VITTORIA", loss: "PERDITA", breakeven: "PAREGGIO",
+    errorSignal: "Errore segnale", errorBacktest: "Errore backtest",
+    loadingStats: "Calcolo...", noSignal: "Nessun dato del segnale disponibile",
+    systemTime: "L'orologio si aggiorna automaticamente",
+  },
+  es: {
+    menu: "Menú", language: "Idioma", timezone: "Zona horaria",
+    chooseLanguage: "Elegir idioma", chooseZone: "Elegir zona horaria",
+    done: "Listo", active: "Sistema activo",
+    auto: "Actualización automática cada 60 segundos",
+    currentSignal: "Señal actual", marketAnalysis: "Último análisis del mercado",
+    currentPrice: "PRECIO ACTUAL", buySignal: "Señal de compra",
+    sellSignal: "Señal de venta", waiting: "Esperando una configuración",
+    loading: "Cargando...", refreshSignal: "Actualizar señal",
+    performance: "Rendimiento", backtest: "Backtest automático",
+    strategyStats: "Estadísticas de estrategia", recalculate: "Recalcular",
+    trades: "Operaciones", winRate: "Tasa de aciertos",
+    profitFactor: "Factor de beneficio", netReturn: "Rendimiento neto",
+    drawdown: "Caída máxima", finalCapital: "Capital final",
+    startingCapital: "CAPITAL INICIAL", lastBacktest: "ÚLTIMO BACKTEST",
+    history: "Historial", recentTrades: "Operaciones recientes",
+    direction: "Dirección", entry: "Entrada", entryTime: "Hora de entrada",
+    exit: "Salida", exitTime: "Hora de salida", result: "Resultado",
+    return: "Retorno", noTrades: "No hay operaciones para mostrar",
+    reason: "Motivo", signalTime: "Hora de la señal", updated: "Actualizado",
+    localTime: "Hora local", activeZone: "ZONA HORARIA ACTIVA",
+    shortTerm: "Corto plazo", mediumTerm: "Medio plazo", trend: "Tendencia",
+    buy: "COMPRAR", sell: "VENDER", wait: "ESPERAR",
+    win: "GANANCIA", loss: "PÉRDIDA", breakeven: "EMPATE",
+    errorSignal: "Error de señal", errorBacktest: "Error de backtest",
+    loadingStats: "Calculando...", noSignal: "No hay datos de señal disponibles",
+    systemTime: "El reloj se actualiza automáticamente",
+  },
+  pt: {
+    menu: "Menu", language: "Idioma", timezone: "Fuso horário",
+    chooseLanguage: "Escolher idioma", chooseZone: "Escolher fuso horário",
+    done: "Concluído", active: "Sistema ativo",
+    auto: "Atualização automática a cada 60 segundos",
+    currentSignal: "Sinal atual", marketAnalysis: "Última análise do mercado",
+    currentPrice: "PREÇO ATUAL", buySignal: "Sinal de compra",
+    sellSignal: "Sinal de venda", waiting: "Aguardando configuração",
+    loading: "Carregando...", refreshSignal: "Atualizar sinal",
+    performance: "Desempenho", backtest: "Backtest automático",
+    strategyStats: "Estatísticas da estratégia", recalculate: "Recalcular",
+    trades: "Operações", winRate: "Taxa de acerto",
+    profitFactor: "Fator de lucro", netReturn: "Retorno líquido",
+    drawdown: "Drawdown máximo", finalCapital: "Capital final",
+    startingCapital: "CAPITAL INICIAL", lastBacktest: "ÚLTIMO BACKTEST",
+    history: "Histórico", recentTrades: "Operações recentes",
+    direction: "Direção", entry: "Entrada", entryTime: "Hora de entrada",
+    exit: "Saída", exitTime: "Hora de saída", result: "Resultado",
+    return: "Retorno", noTrades: "Nenhuma operação para exibir",
+    reason: "Motivo", signalTime: "Hora do sinal", updated: "Atualizado",
+    localTime: "Hora local", activeZone: "FUSO HORÁRIO ATIVO",
+    shortTerm: "Curto prazo", mediumTerm: "Médio prazo", trend: "Tendência",
+    buy: "COMPRAR", sell: "VENDER", wait: "AGUARDAR",
+    win: "VITÓRIA", loss: "PERDA", breakeven: "EMPATE",
+    errorSignal: "Erro no sinal", errorBacktest: "Erro no backtest",
+    loadingStats: "Calculando...", noSignal: "Nenhum dado de sinal disponível",
+    systemTime: "O relógio é atualizado automaticamente",
+  },
+  fr: {
+    menu: "Menu", language: "Langue", timezone: "Fuseau horaire",
+    chooseLanguage: "Choisir la langue", chooseZone: "Choisir le fuseau horaire",
+    done: "Terminé", active: "Système actif",
+    auto: "Actualisation automatique toutes les 60 secondes",
+    currentSignal: "Signal actuel", marketAnalysis: "Dernière analyse du marché",
+    currentPrice: "PRIX ACTUEL", buySignal: "Signal d'achat",
+    sellSignal: "Signal de vente", waiting: "En attente d'une configuration",
+    loading: "Chargement...", refreshSignal: "Actualiser le signal",
+    performance: "Performance", backtest: "Backtest automatique",
+    strategyStats: "Statistiques de stratégie", recalculate: "Recalculer",
+    trades: "Transactions", winRate: "Taux de réussite",
+    profitFactor: "Facteur de profit", netReturn: "Rendement net",
+    drawdown: "Baisse maximale", finalCapital: "Capital final",
+    startingCapital: "CAPITAL INITIAL", lastBacktest: "DERNIER BACKTEST",
+    history: "Historique", recentTrades: "Transactions récentes",
+    direction: "Direction", entry: "Entrée", entryTime: "Heure d'entrée",
+    exit: "Sortie", exitTime: "Heure de sortie", result: "Résultat",
+    return: "Rendement", noTrades: "Aucune transaction à afficher",
+    reason: "Raison", signalTime: "Heure du signal", updated: "Mis à jour",
+    localTime: "Heure locale", activeZone: "FUSEAU HORAIRE ACTIF",
+    shortTerm: "Court terme", mediumTerm: "Moyen terme", trend: "Tendance",
+    buy: "ACHAT", sell: "VENTE", wait: "ATTENTE",
+    win: "GAIN", loss: "PERTE", breakeven: "ÉGALITÉ",
+    errorSignal: "Erreur de signal", errorBacktest: "Erreur de backtest",
+    loadingStats: "Calcul...", noSignal: "Aucune donnée de signal disponible",
+    systemTime: "L'horloge se met à jour automatiquement",
+  },
+  de: {
+    menu: "Menü", language: "Sprache", timezone: "Zeitzone",
+    chooseLanguage: "Sprache auswählen", chooseZone: "Zeitzone auswählen",
+    done: "Fertig", active: "System aktiv",
+    auto: "Automatische Aktualisierung alle 60 Sekunden",
+    currentSignal: "Aktuelles Signal", marketAnalysis: "Letzte Marktanalyse",
+    currentPrice: "AKTUELLER PREIS", buySignal: "Kaufsignal",
+    sellSignal: "Verkaufssignal", waiting: "Warte auf ein Setup",
+    loading: "Laden...", refreshSignal: "Signal aktualisieren",
+    performance: "Leistung", backtest: "Automatischer Backtest",
+    strategyStats: "Strategiestatistiken", recalculate: "Neu berechnen",
+    trades: "Trades", winRate: "Trefferquote", profitFactor: "Profitfaktor",
+    netReturn: "Nettorendite", drawdown: "Maximaler Drawdown",
+    finalCapital: "Endkapital", startingCapital: "STARTKAPITAL",
+    lastBacktest: "LETZTER BACKTEST", history: "Verlauf",
+    recentTrades: "Letzte Trades", direction: "Richtung", entry: "Einstieg",
+    entryTime: "Einstiegszeit", exit: "Ausstieg", exitTime: "Ausstiegszeit",
+    result: "Ergebnis", return: "Rendite", noTrades: "Keine Trades vorhanden",
+    reason: "Grund", signalTime: "Signalzeit", updated: "Aktualisiert",
+    localTime: "Ortszeit", activeZone: "AKTIVE ZEITZONE",
+    shortTerm: "Kurzfristig", mediumTerm: "Mittelfristig", trend: "Trend",
+    buy: "KAUFEN", sell: "VERKAUFEN", wait: "WARTEN",
+    win: "GEWINN", loss: "VERLUST", breakeven: "AUSGEGLICHEN",
+    errorSignal: "Signalfehler", errorBacktest: "Backtest-Fehler",
+    loadingStats: "Berechnung...", noSignal: "Keine Signaldaten verfügbar",
+    systemTime: "Uhrzeit wird automatisch aktualisiert",
+  },
+  tr: {
+    menu: "Menü", language: "Dil", timezone: "Saat dilimi",
+    chooseLanguage: "Dil seç", chooseZone: "Saat dilimi seç",
+    done: "Tamam", active: "Sistem aktif",
+    auto: "Her 60 saniyede otomatik yenileme",
+    currentSignal: "Güncel sinyal", marketAnalysis: "Son piyasa analizi",
+    currentPrice: "GÜNCEL FİYAT", buySignal: "Alım sinyali",
+    sellSignal: "Satış sinyali", waiting: "Sinyal bekleniyor",
+    loading: "Yükleniyor...", refreshSignal: "Sinyali yenile",
+    performance: "Performans", backtest: "Otomatik backtest",
+    strategyStats: "Strateji istatistikleri", recalculate: "Yeniden hesapla",
+    trades: "İşlemler", winRate: "Kazanma oranı", profitFactor: "Kâr faktörü",
+    netReturn: "Net getiri", drawdown: "Maksimum düşüş",
+    finalCapital: "Son sermaye", startingCapital: "BAŞLANGIÇ SERMAYESİ",
+    lastBacktest: "SON BACKTEST", history: "Geçmiş",
+    recentTrades: "Son işlemler", direction: "Yön", entry: "Giriş",
+    entryTime: "Giriş zamanı", exit: "Çıkış", exitTime: "Çıkış zamanı",
+    result: "Sonuç", return: "Getiri", noTrades: "Gösterilecek işlem yok",
+    reason: "Neden", signalTime: "Sinyal zamanı", updated: "Güncellendi",
+    localTime: "Yerel saat", activeZone: "ETKİN SAAT DİLİMİ",
+    shortTerm: "Kısa vadeli", mediumTerm: "Orta vadeli", trend: "Trend",
+    buy: "AL", sell: "SAT", wait: "BEKLE",
+    win: "KAZANÇ", loss: "KAYIP", breakeven: "BAŞABAŞ",
+    errorSignal: "Sinyal hatası", errorBacktest: "Backtest hatası",
+    loadingStats: "Hesaplanıyor...", noSignal: "Sinyal verisi bulunamadı",
+    systemTime: "Saat otomatik güncellenir",
+  },
+  ar: {
+    menu: "القائمة", language: "اللغة", timezone: "المنطقة الزمنية",
+    chooseLanguage: "اختر اللغة", chooseZone: "اختر المنطقة الزمنية",
+    done: "تم", active: "النظام نشط",
+    auto: "تحديث تلقائي كل 60 ثانية",
+    currentSignal: "الإشارة الحالية", marketAnalysis: "آخر تحليل للسوق",
+    currentPrice: "السعر الحالي", buySignal: "إشارة شراء",
+    sellSignal: "إشارة بيع", waiting: "في انتظار فرصة",
+    loading: "جار التحميل...", refreshSignal: "تحديث الإشارة",
+    performance: "الأداء", backtest: "اختبار تاريخي تلقائي",
+    strategyStats: "إحصائيات الاستراتيجية", recalculate: "إعادة الحساب",
+    trades: "الصفقات", winRate: "نسبة النجاح", profitFactor: "عامل الربح",
+    netReturn: "العائد الصافي", drawdown: "أقصى تراجع",
+    finalCapital: "رأس المال النهائي", startingCapital: "رأس المال الأولي",
+    lastBacktest: "آخر اختبار", history: "السجل", recentTrades: "الصفقات الأخيرة",
+    direction: "الاتجاه", entry: "الدخول", entryTime: "وقت الدخول",
+    exit: "الخروج", exitTime: "وقت الخروج", result: "النتيجة",
+    return: "العائد", noTrades: "لا توجد صفقات للعرض",
+    reason: "السبب", signalTime: "وقت الإشارة", updated: "تم التحديث",
+    localTime: "الوقت المحلي", activeZone: "المنطقة الزمنية النشطة",
+    shortTerm: "قصير المدى", mediumTerm: "متوسط المدى", trend: "الاتجاه",
+    buy: "شراء", sell: "بيع", wait: "انتظار",
+    win: "ربح", loss: "خسارة", breakeven: "تعادل",
+    errorSignal: "خطأ في الإشارة", errorBacktest: "خطأ في الاختبار",
+    loadingStats: "جار الحساب...", noSignal: "لا توجد بيانات للإشارة",
+    systemTime: "يتم تحديث الساعة تلقائيًا",
+  },
+  ru: {
+    menu: "Меню", language: "Язык", timezone: "Часовой пояс",
+    chooseLanguage: "Выберите язык", chooseZone: "Выберите часовой пояс",
+    done: "Готово", active: "Система активна",
+    auto: "Автообновление каждые 60 секунд",
+    currentSignal: "Текущий сигнал", marketAnalysis: "Последний анализ рынка",
+    currentPrice: "ТЕКУЩАЯ ЦЕНА", buySignal: "Сигнал на покупку",
+    sellSignal: "Сигнал на продажу", waiting: "Ожидание сигнала",
+    loading: "Загрузка...", refreshSignal: "Обновить сигнал",
+    performance: "Результаты", backtest: "Автоматический бэктест",
+    strategyStats: "Статистика стратегии", recalculate: "Пересчитать",
+    trades: "Сделки", winRate: "Процент побед", profitFactor: "Фактор прибыли",
+    netReturn: "Чистая доходность", drawdown: "Максимальная просадка",
+    finalCapital: "Итоговый капитал", startingCapital: "НАЧАЛЬНЫЙ КАПИТАЛ",
+    lastBacktest: "ПОСЛЕДНИЙ БЭКТЕСТ", history: "История",
+    recentTrades: "Последние сделки", direction: "Направление",
+    entry: "Вход", entryTime: "Время входа", exit: "Выход",
+    exitTime: "Время выхода", result: "Результат", return: "Доходность",
+    noTrades: "Нет сделок для отображения", reason: "Причина",
+    signalTime: "Время сигнала", updated: "Обновлено",
+    localTime: "Местное время", activeZone: "АКТИВНЫЙ ЧАСОВОЙ ПОЯС",
+    shortTerm: "Краткосрочный", mediumTerm: "Среднесрочный", trend: "Тренд",
+    buy: "ПОКУПКА", sell: "ПРОДАЖА", wait: "ОЖИДАНИЕ",
+    win: "ПРИБЫЛЬ", loss: "УБЫТОК", breakeven: "БЕЗ УБЫТКА",
+    errorSignal: "Ошибка сигнала", errorBacktest: "Ошибка бэктеста",
+    loadingStats: "Расчёт...", noSignal: "Нет данных сигнала",
+    systemTime: "Время обновляется автоматически",
+  },
+  "pt-BR": {
+    menu: "Menu", language: "Idioma", timezone: "Fuso horário",
+    chooseLanguage: "Escolher idioma", chooseZone: "Escolher fuso horário",
+    done: "Concluído", active: "Sistema ativo",
+    auto: "Atualização automática a cada 60 segundos",
+    currentSignal: "Sinal atual", marketAnalysis: "Última análise do mercado",
+    currentPrice: "PREÇO ATUAL", buySignal: "Sinal de compra",
+    sellSignal: "Sinal de venda", waiting: "Aguardando configuração",
+    loading: "Carregando...", refreshSignal: "Atualizar sinal",
+    performance: "Desempenho", backtest: "Backtest automático",
+    strategyStats: "Estatísticas da estratégia", recalculate: "Recalcular",
+    trades: "Operações", winRate: "Taxa de acerto", profitFactor: "Fator de lucro",
+    netReturn: "Retorno líquido", drawdown: "Drawdown máximo",
+    finalCapital: "Capital final", startingCapital: "CAPITAL INICIAL",
+    lastBacktest: "ÚLTIMO BACKTEST", history: "Histórico",
+    recentTrades: "Operações recentes", direction: "Direção",
+    entry: "Entrada", entryTime: "Horário de entrada", exit: "Saída",
+    exitTime: "Horário de saída", result: "Resultado", return: "Retorno",
+    noTrades: "Nenhuma operação para exibir", reason: "Motivo",
+    signalTime: "Horário do sinal", updated: "Atualizado",
+    localTime: "Hora local", activeZone: "FUSO HORÁRIO ATIVO",
+    shortTerm: "Curto prazo", mediumTerm: "Médio prazo", trend: "Tendência",
+    buy: "COMPRAR", sell: "VENDER", wait: "AGUARDAR",
+    win: "LUCRO", loss: "PERDA", breakeven: "EMPATE",
+    errorSignal: "Erro no sinal", errorBacktest: "Erro no backtest",
+    loadingStats: "Calculando...", noSignal: "Nenhum dado de sinal disponível",
+    systemTime: "O relógio é atualizado automaticamente",
+  },
+  ja: {
+    menu: "メニュー", language: "言語", timezone: "タイムゾーン",
+    chooseLanguage: "言語を選択", chooseZone: "タイムゾーンを選択",
+    done: "完了", active: "システム稼働中",
+    auto: "60秒ごとに自動更新", currentSignal: "現在のシグナル",
+    marketAnalysis: "最新の市場分析", currentPrice: "現在価格",
+    buySignal: "買いシグナル", sellSignal: "売りシグナル",
+    waiting: "シグナル待機中", loading: "読み込み中...",
+    refreshSignal: "シグナルを更新", performance: "パフォーマンス",
+    backtest: "自動バックテスト", strategyStats: "戦略統計",
+    recalculate: "再計算", trades: "取引", winRate: "勝率",
+    profitFactor: "プロフィットファクター", netReturn: "純利益率",
+    drawdown: "最大ドローダウン", finalCapital: "最終資金",
+    startingCapital: "初期資金", lastBacktest: "最終バックテスト",
+    history: "履歴", recentTrades: "最近の取引", direction: "方向",
+    entry: "エントリー", entryTime: "エントリー時刻", exit: "決済",
+    exitTime: "決済時刻", result: "結果", return: "リターン",
+    noTrades: "表示する取引はありません", reason: "理由",
+    signalTime: "シグナル時刻", updated: "更新済み",
+    localTime: "現地時間", activeZone: "使用中のタイムゾーン",
+    shortTerm: "短期", mediumTerm: "中期", trend: "トレンド",
+    buy: "買い", sell: "売り", wait: "待機", win: "勝ち",
+    loss: "負け", breakeven: "引き分け", errorSignal: "シグナルエラー",
+    errorBacktest: "バックテストエラー", loadingStats: "計算中...",
+    noSignal: "シグナルデータがありません", systemTime: "時計は自動更新されます",
+  },
+  zh: {
+    menu: "菜单", language: "语言", timezone: "时区",
+    chooseLanguage: "选择语言", chooseZone: "选择时区",
+    done: "完成", active: "系统运行中",
+    auto: "每60秒自动刷新", currentSignal: "当前信号",
+    marketAnalysis: "最新市场分析", currentPrice: "当前价格",
+    buySignal: "买入信号", sellSignal: "卖出信号",
+    waiting: "等待交易机会", loading: "加载中...",
+    refreshSignal: "刷新信号", performance: "表现",
+    backtest: "自动回测", strategyStats: "策略统计",
+    recalculate: "重新计算", trades: "交易次数", winRate: "胜率",
+    profitFactor: "盈利因子", netReturn: "净收益率",
+    drawdown: "最大回撤", finalCapital: "最终资金",
+    startingCapital: "初始资金", lastBacktest: "最近回测",
+    history: "历史记录", recentTrades: "最近交易", direction: "方向",
+    entry: "入场价", entryTime: "入场时间", exit: "出场价",
+    exitTime: "出场时间", result: "结果", return: "收益",
+    noTrades: "暂无交易记录", reason: "原因", signalTime: "信号时间",
+    updated: "已更新", localTime: "当地时间", activeZone: "当前时区",
+    shortTerm: "短期", mediumTerm: "中期", trend: "趋势",
+    buy: "买入", sell: "卖出", wait: "等待", win: "盈利",
+    loss: "亏损", breakeven: "持平", errorSignal: "信号错误",
+    errorBacktest: "回测错误", loadingStats: "计算中...",
+    noSignal: "暂无信号数据", systemTime: "时钟自动更新",
+  },
 };
 
 const timeZones = [
-  { name: "Greqi", zone: "Europe/Athens", flag: "🇬🇷" },
-  { name: "Shqiperi", zone: "Europe/Tirane", flag: "🇦🇱" },
-  { name: "Londer", zone: "Europe/London", flag: "🇬🇧" },
+  { name: "Greece", zone: "Europe/Athens", flag: "🇬🇷" },
+  { name: "Albania", zone: "Europe/Tirane", flag: "🇦🇱" },
+  { name: "London", zone: "Europe/London", flag: "🇬🇧" },
   { name: "New York", zone: "America/New_York", flag: "🇺🇸" },
   { name: "Tokyo", zone: "Asia/Tokyo", flag: "🇯🇵" },
   { name: "Dubai", zone: "Asia/Dubai", flag: "🇦🇪" },
@@ -70,198 +457,154 @@ const timeZones = [
   { name: "UTC", zone: "UTC", flag: "🌐" },
 ];
 
-function displayValue(value: unknown, suffix = "") {
-  if (value === undefined || value === null || value === "") return "--";
+const C = {
+  bg: "#08090b",
+  panel: "#101114",
+  panel2: "#151619",
+  border: "rgba(212,175,55,0.18)",
+  gold: "#d4af37",
+  gold2: "#f2d675",
+  text: "#f4f0e6",
+  muted: "#92939a",
+  green: "#31d69a",
+  red: "#ff6577",
+};
 
-  if (typeof value === "number") {
-    return Number.isFinite(value) ? `${value.toFixed(2)}${suffix}` : "--";
-  }
+const panel: React.CSSProperties = {
+  background: "linear-gradient(145deg, #131417, #0d0e10)",
+  border: `1px solid ${C.border}`,
+  borderRadius: 18,
+  padding: 20,
+  minWidth: 0,
+};
 
-  if (typeof value === "string") return `${value}${suffix}`;
+const label: React.CSSProperties = {
+  color: C.muted,
+  fontSize: 11,
+  letterSpacing: 1.2,
+  fontWeight: 700,
+};
 
-  return String(value);
-}
-
-function findValue(data: Record<string, unknown>, keys: string[]) {
-  for (const key of keys) {
-    if (data[key] !== undefined && data[key] !== null) {
-      return data[key];
+function numberFrom(...values: any[]): number | null {
+  for (const value of values) {
+    if (value !== undefined && value !== null && value !== "") {
+      const n = Number(value);
+      if (Number.isFinite(n)) return n;
     }
   }
+  return null;
+}
 
+function money(value: any, currency = "USD") {
+  const n = numberFrom(value);
+  if (n === null) return "—";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    maximumFractionDigits: 2,
+  }).format(n);
+}
+
+function percent(value: any) {
+  const n = numberFrom(value);
+  return n === null ? "—" : `${n.toFixed(2)}%`;
+}
+
+function dateInZone(value: any, zone: string) {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  try {
+    return new Intl.DateTimeFormat("en-GB", {
+      timeZone: zone,
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    }).format(date);
+  } catch {
+    return date.toLocaleString();
+  }
+}
+
+function first(data: Data | null, ...keys: string[]) {
+  if (!data) return undefined;
+  for (const key of keys) {
+    if (data[key] !== undefined && data[key] !== null) return data[key];
+  }
   return undefined;
 }
 
-function parseDateTime(value: unknown): Date | null {
-  if (typeof value !== "string" || !value.trim()) return null;
-
-  const input = value.trim();
-  const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(input);
-  const date = hasTimezone
-    ? new Date(input)
-    : new Date(input.replace(" ", "T"));
-
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-
-function formatDateTimeInZone(value: unknown, zone: string) {
-  const date = parseDateTime(value);
-  if (!date) return "--";
-
-  try {
-    return new Intl.DateTimeFormat("en-GB", {
-      timeZone: zone,
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hourCycle: "h23",
-    }).format(date);
-  } catch {
-    return "--";
-  }
-}
-
-function getLocalTime(zone: string, now: Date) {
-  try {
-    return new Intl.DateTimeFormat("en-GB", {
-      timeZone: zone,
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hourCycle: "h23",
-    }).format(now);
-  } catch {
-    return "--:--:--";
-  }
-}
-
-function getLocalDate(zone: string, now: Date) {
-  try {
-    return new Intl.DateTimeFormat("en-GB", {
-      timeZone: zone,
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }).format(now);
-  } catch {
-    return "--";
-  }
-}
-
-function getZoneName(zone: string) {
-  return timeZones.find((item) => item.zone === zone)?.name ?? zone;
-}
-
-const colors = {
-  background: "#070707",
-  panel: "rgba(19, 19, 19, 0.88)",
-  panelSoft: "rgba(255, 255, 255, 0.025)",
-  border: "rgba(242, 190, 76, 0.16)",
-  gold: "#f5c15c",
-  goldBright: "#ffdc8a",
-  muted: "#929292",
-  text: "#f7f4ed",
-  green: "#4ade80",
-  red: "#fb7185",
-};
-
-const panelStyle = {
-  background: colors.panel,
-  border: `1px solid ${colors.border}`,
-  borderRadius: 20,
-  padding: 20,
-  boxShadow: "0 12px 36px rgba(0,0,0,0.20)",
-  backdropFilter: "blur(16px)",
-} as const;
-
-const labelStyle = {
-  color: colors.muted,
-  fontSize: 12,
-  letterSpacing: 0.7,
-} as const;
-
-const buttonStyle = {
-  background: `linear-gradient(135deg, ${colors.goldBright}, ${colors.gold})`,
-  color: "#17120a",
-  border: "1px solid rgba(255, 220, 138, 0.65)",
-  borderRadius: 12,
-  padding: "12px 16px",
-  fontWeight: 800,
-  fontSize: 13,
-  cursor: "pointer",
-  boxShadow: "0 4px 18px rgba(245,193,92,0.10)",
-  transition: "transform 180ms ease, box-shadow 180ms ease",
-} as const;
-
-const smallLabelStyle = {
-  color: "#858585",
-  fontSize: 11,
-  letterSpacing: 1.4,
-  fontWeight: 700,
-} as const;
-
-const cellStyle = {
-  padding: "14px 12px",
-  borderBottom: "1px solid rgba(255,255,255,0.065)",
-  whiteSpace: "nowrap" as const,
-} as const;
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      style={{
-        color: colors.gold,
-        fontSize: 11,
-        fontWeight: 800,
-        letterSpacing: 2,
-        textTransform: "uppercase",
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
 export default function Home() {
-  const [signal, setSignal] = useState<Signal | null>(null);
-  const [backtest, setBacktest] = useState<Backtest | null>(null);
-
-  const [signalLoading, setSignalLoading] = useState(true);
-  const [backtestLoading, setBacktestLoading] = useState(true);
-
-  const [signalError, setSignalError] = useState("");
-  const [backtestError, setBacktestError] = useState("");
-
-  const [lastSignalUpdate, setLastSignalUpdate] = useState("");
-  const [lastBacktestUpdate, setLastBacktestUpdate] = useState("");
-  const [now, setNow] = useState<Date | null>(null);
-
+  const [language, setLanguage] = useState<Lang>("sq");
+  const [languageReady, setLanguageReady] = useState(false);
   const [selectedZone, setSelectedZone] = useState("Europe/Athens");
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const refreshSignal = useCallback(async () => {
+  const [signal, setSignal] = useState<Data | null>(null);
+  const [backtest, setBacktest] = useState<Data | null>(null);
+  const [signalLoading, setSignalLoading] = useState(true);
+  const [backtestLoading, setBacktestLoading] = useState(true);
+  const [signalError, setSignalError] = useState("");
+  const [backtestError, setBacktestError] = useState("");
+  const [lastUpdate, setLastUpdate] = useState("");
+  const [now, setNow] = useState(new Date());
+
+  const t = (key: string) =>
+    translations[language]?.[key] ?? en[key] ?? key;
+
+  useEffect(() => {
     try {
-      const response = await fetch("/api/signals", {
-        cache: "no-store",
-      });
+      const savedLanguage = localStorage.getItem("kelilelibot-language");
+      const savedZone = localStorage.getItem("kelilelibot-timezone");
 
-      const data = await response.json();
-
-      if (!response.ok || data.error) {
-        throw new Error(data.error || "Nuk u mor sinjali.");
+      if (savedLanguage && languages.some((x) => x.code === savedLanguage)) {
+        setLanguage(savedLanguage as Lang);
       }
+      if (savedZone && timeZones.some((x) => x.zone === savedZone)) {
+        setSelectedZone(savedZone);
+      }
+    } catch {
+      // Local storage may be unavailable in some browser contexts.
+    }
+    setLanguageReady(true);
+  }, []);
 
+  useEffect(() => {
+    if (!languageReady) return;
+    try {
+      localStorage.setItem("kelilelibot-language", language);
+      document.documentElement.lang = language;
+      document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
+    } catch {
+      // The language still works for the current session.
+    }
+  }, [language, languageReady]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("kelilelibot-timezone", selectedZone);
+    } catch {
+      // Ignore unavailable local storage.
+    }
+  }, [selectedZone]);
+
+  const refreshSignal = useCallback(async () => {
+    setSignalLoading(true);
+    setSignalError("");
+    try {
+      const response = await fetch("/api/signals", { cache: "no-store" });
+      const data = await response.json();
+      if (!response.ok || data?.error) {
+        throw new Error(data?.error || `HTTP ${response.status}`);
+      }
       setSignal(data);
-      setSignalError("");
-      setLastSignalUpdate(new Date().toISOString());
+      setLastUpdate(new Date().toISOString());
     } catch (error) {
       setSignalError(
-        error instanceof Error
-          ? error.message
-          : "Gabim gjate marrjes se sinjalit."
+        error instanceof Error ? error.message : "Could not load signal"
       );
     } finally {
       setSignalLoading(false);
@@ -269,25 +612,18 @@ export default function Home() {
   }, []);
 
   const refreshBacktest = useCallback(async () => {
+    setBacktestLoading(true);
+    setBacktestError("");
     try {
-      const response = await fetch("/api/backtest", {
-        cache: "no-store",
-      });
-
+      const response = await fetch("/api/backtest", { cache: "no-store" });
       const data = await response.json();
-
-      if (!response.ok || data.error) {
-        throw new Error(data.error || "Backtest-i deshtoi.");
+      if (!response.ok || data?.error) {
+        throw new Error(data?.error || `HTTP ${response.status}`);
       }
-
       setBacktest(data);
-      setBacktestError("");
-      setLastBacktestUpdate(new Date().toISOString());
     } catch (error) {
       setBacktestError(
-        error instanceof Error
-          ? error.message
-          : "Gabim gjate backtest-it."
+        error instanceof Error ? error.message : "Could not load backtest"
       );
     } finally {
       setBacktestLoading(false);
@@ -295,807 +631,665 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    setNow(new Date());
+    void refreshSignal();
+    void refreshBacktest();
 
-    const timer = window.setInterval(() => {
-      setNow(new Date());
-    }, 1000);
-
-    return () => window.clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    let active = true;
-    let signalBusy = false;
-    let backtestBusy = false;
-
-    const safeSignal = async () => {
-      if (!active || signalBusy) return;
-      signalBusy = true;
-
-      try {
-        await refreshSignal();
-      } finally {
-        signalBusy = false;
-      }
-    };
-
-    const safeBacktest = async () => {
-      if (!active || backtestBusy) return;
-      backtestBusy = true;
-
-      try {
-        await refreshBacktest();
-      } finally {
-        backtestBusy = false;
-      }
-    };
-
-    void safeSignal();
-    void safeBacktest();
-
-    const signalTimer = window.setInterval(() => {
-      void safeSignal();
-    }, 60_000);
-
-    const backtestTimer = window.setInterval(() => {
-      void safeBacktest();
-    }, 60_000);
+    const signalTimer = window.setInterval(() => void refreshSignal(), 60000);
+    const backtestTimer = window.setInterval(() => void refreshBacktest(), 60000);
+    const clockTimer = window.setInterval(() => setNow(new Date()), 1000);
 
     return () => {
-      active = false;
       window.clearInterval(signalTimer);
       window.clearInterval(backtestTimer);
+      window.clearInterval(clockTimer);
     };
   }, [refreshSignal, refreshBacktest]);
 
-  const signalName = String(
-    findValue(signal ?? {}, ["signal", "action", "recommendation"]) ?? "WAIT"
+  const rawSignal = String(
+    first(signal, "signal", "action", "recommendation", "type") ?? "WAIT"
   ).toUpperCase();
 
-  const isBuy =
-    signalName.includes("BUY") || signalName.includes("LONG");
-  const isSell =
-    signalName.includes("SELL") || signalName.includes("SHORT");
+  const isBuy = rawSignal.includes("BUY") || rawSignal.includes("LONG");
+  const isSell = rawSignal.includes("SELL") || rawSignal.includes("SHORT");
+  const signalColor = isBuy ? C.green : isSell ? C.red : C.gold;
+  const signalLabel = isBuy ? t("buy") : isSell ? t("sell") : t("wait");
 
-  const signalColor = isBuy
-    ? colors.green
-    : isSell
-      ? colors.red
-      : colors.gold;
+  const price = first(signal, "price", "close", "currentPrice", "lastPrice");
+  const rsi = first(signal, "rsi", "RSI");
+  const ema9 = first(signal, "ema9", "EMA9", "ema_9");
+  const ema21 = first(signal, "ema21", "EMA21", "ema_21");
+  const ema200 = first(signal, "ema200", "EMA200", "ema_200");
+  const signalTimestamp = first(signal, "timestamp", "time", "date");
 
-  const signalDescription = isBuy
-    ? "Sinjal per blerje"
-    : isSell
-      ? "Sinjal per shitje"
-      : "Ne pritje te nje konfigurimi";
+  const tradeList: Data[] = Array.isArray(backtest?.trades)
+    ? [...backtest.trades].reverse().slice(0, 20)
+    : Array.isArray(backtest?.results)
+      ? [...backtest.results].reverse().slice(0, 20)
+      : [];
 
-  const tradeCount = findValue(backtest ?? {}, [
-    "totalTrades",
-    "tradesCount",
-    "total_trades",
-  ]);
+  const tradeCount =
+    numberFrom(
+      first(backtest, "totalTrades", "tradesCount", "total_trades"),
+      Array.isArray(backtest?.trades) ? backtest.trades.length : null
+    ) ?? 0;
 
-  const winRate = findValue(backtest ?? {}, [
-    "winRatePct",
-    "winRate",
-    "win_rate",
-  ]);
+  const winRate = numberFrom(
+    first(backtest, "winRate", "winRatePct", "win_rate", "win_rate_pct")
+  );
 
-  const profitFactor = findValue(backtest ?? {}, [
-    "profitFactor",
-    "profit_factor",
-  ]);
+  const profitFactor = numberFrom(
+    first(backtest, "profitFactor", "profit_factor")
+  );
 
-  const netReturn = findValue(backtest ?? {}, [
-    "netReturnPct",
-    "netProfitPct",
-    "totalReturnPct",
-    "net_return_pct",
-    "total_return_pct",
-  ]);
+  const netReturn = numberFrom(
+    first(backtest, "netProfitPct", "netReturnPct", "totalReturnPct", "net_return_pct")
+  );
 
-  const maxDrawdown = findValue(backtest ?? {}, [
-    "maxDrawdownPct",
-    "max_drawdown_pct",
-  ]);
+  const drawdown = numberFrom(
+    first(backtest, "maxDrawdownPct", "max_drawdown_pct", "maxDrawdown")
+  );
 
-  const finalCapital = findValue(backtest ?? {}, [
-    "finalCapital",
-    "final_capital",
-  ]);
+  const startingCapital = numberFrom(
+    first(backtest, "startingCapital", "initialCapital", "initial_capital")
+  );
 
-  const startingCapital = findValue(backtest ?? {}, [
-    "initialCapital",
-    "startingCapital",
-    "starting_capital",
-  ]);
+  const finalCapital = numberFrom(
+    first(backtest, "finalCapital", "final_capital", "endingCapital")
+  );
 
-  const trades = Array.isArray(backtest?.trades)
-    ? backtest.trades.slice(-20).reverse()
-    : [];
+  const currentZone = timeZones.find((z) => z.zone === selectedZone);
+  const selectedLanguage = languages.find((x) => x.code === language);
 
-  const signalTimestamp = findValue(signal ?? {}, [
-    "timestamp",
-    "time",
-    "datetime",
-    "updatedAt",
-  ]);
-
-  const activePlace =
-    timeZones.find((place) => place.zone === selectedZone) ?? timeZones[0];
-
-  const statCards = [
+  const stats = [
+    { title: t("trades"), value: String(tradeCount), color: C.gold },
+    { title: t("winRate"), value: percent(winRate), color: C.green },
     {
-      label: "Tregtime",
-      value: displayValue(tradeCount),
-      icon: "↗",
-      accent: "#f5c15c",
+      title: t("profitFactor"),
+      value: profitFactor === null ? "—" : profitFactor.toFixed(2),
+      color: C.gold2,
     },
     {
-      label: "Win rate",
-      value: displayValue(winRate, "%"),
-      icon: "%",
-      accent: "#4ade80",
+      title: t("netReturn"),
+      value: percent(netReturn),
+      color: netReturn !== null && netReturn < 0 ? C.red : C.green,
     },
+    { title: t("drawdown"), value: percent(drawdown), color: C.red },
     {
-      label: "Profit factor",
-      value: displayValue(profitFactor),
-      icon: "◆",
-      accent: "#f5c15c",
-    },
-    {
-      label: "Kthimi neto",
-      value: displayValue(netReturn, "%"),
-      icon: "↑",
-      accent:
-        typeof netReturn === "number" && netReturn < 0
-          ? colors.red
-          : colors.green,
-    },
-    {
-      label: "Max drawdown",
-      value: displayValue(maxDrawdown, "%"),
-      icon: "↓",
-      accent: colors.red,
-    },
-    {
-      label: "Kapitali final",
-      value: displayValue(finalCapital),
-      icon: "$",
-      accent: "#f5c15c",
+      title: t("finalCapital"),
+      value: money(finalCapital),
+      color: C.gold2,
     },
   ];
+
+  const tradeValue = (trade: Data, ...keys: string[]) =>
+    first(trade, ...keys);
+
+  const tradeSide = (trade: Data) =>
+    String(tradeValue(trade, "side", "direction", "type", "signal") ?? "—").toUpperCase();
+
+  const tradeEntry = (trade: Data) =>
+    tradeValue(trade, "entry", "entryPrice", "entry_price", "open");
+
+  const tradeExit = (trade: Data) =>
+    tradeValue(trade, "exit", "exitPrice", "exit_price", "close");
+
+  const tradeEntryTime = (trade: Data) =>
+    tradeValue(trade, "entryTime", "entry_time", "openTime", "open_time");
+
+  const tradeExitTime = (trade: Data) =>
+    tradeValue(trade, "exitTime", "exit_time", "closeTime", "close_time");
+
+  const tradeReturn = (trade: Data) =>
+    numberFrom(
+      tradeValue(trade, "pnlPct", "netPct", "netReturnPct", "returnPct", "return_pct")
+    );
+
+  const tradeResult = (trade: Data) => {
+    const explicit = String(tradeValue(trade, "result", "status") ?? "").toUpperCase();
+    if (explicit.includes("WIN") || explicit.includes("PROFIT")) return t("win");
+    if (explicit.includes("LOSS") || explicit.includes("LOSE")) return t("loss");
+    const ret = tradeReturn(trade);
+    if (ret !== null) {
+      if (ret > 0) return t("win");
+      if (ret < 0) return t("loss");
+      return t("breakeven");
+    }
+    return explicit || "—";
+  };
+
+  const thStyle: React.CSSProperties = {
+    textAlign: "left",
+    color: C.muted,
+    fontSize: 10,
+    letterSpacing: 0.8,
+    fontWeight: 700,
+    padding: "13px 12px",
+    borderBottom: `1px solid ${C.border}`,
+    whiteSpace: "nowrap",
+  };
+
+  const tdStyle: React.CSSProperties = {
+    padding: "14px 12px",
+    borderBottom: "1px solid rgba(255,255,255,0.045)",
+    fontSize: 12,
+    whiteSpace: "nowrap",
+  };
+
+  const buttonStyle: React.CSSProperties = {
+    border: `1px solid ${C.border}`,
+    background: "rgba(212,175,55,0.08)",
+    color: C.gold2,
+    padding: "10px 14px",
+    borderRadius: 10,
+    cursor: "pointer",
+    fontSize: 12,
+    fontWeight: 700,
+  };
 
   return (
     <main
       style={{
         minHeight: "100vh",
         background:
-          "radial-gradient(ellipse at 50% -12%, rgba(184,132,39,0.17), transparent 43%), radial-gradient(ellipse at 100% 40%, rgba(132,88,22,0.06), transparent 35%), #070707",
-        color: colors.text,
-        padding: "26px 16px 55px",
-        fontFamily:
-          "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        boxSizing: "border-box",
+          "radial-gradient(ellipse at 50% -10%, rgba(212,175,55,0.10), transparent 45%), #08090b",
+        color: C.text,
+        padding: "20px 16px 28px",
+        fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+        direction: language === "ar" ? "rtl" : "ltr",
       }}
     >
-      <style>{`
-        * { box-sizing: border-box; }
-        html { background: #070707; }
-        body { margin: 0; background: #070707; }
-        button, select { font: inherit; }
-        button { -webkit-tap-highlight-color: transparent; }
-        button:disabled { opacity: .58; cursor: wait; }
-        .kl-card {
-          transition: border-color 200ms ease, transform 200ms ease, box-shadow 200ms ease;
-        }
-        .kl-card:hover {
-          border-color: rgba(245,193,92,.38) !important;
-          box-shadow: 0 12px 36px rgba(0,0,0,.25), 0 0 22px rgba(245,193,92,.035);
-        }
-        .kl-button:hover:not(:disabled) {
-          transform: translateY(-1px);
-          box-shadow: 0 7px 23px rgba(245,193,92,.19);
-        }
-        .kl-menu-button:hover { border-color: #ffdc8a !important; }
-        .kl-live-dot {
-          display: inline-block;
-          width: 7px;
-          height: 7px;
-          border-radius: 50%;
-          background: #4ade80;
-          box-shadow: 0 0 12px rgba(74,222,128,.65);
-          animation: kl-pulse 1.8s infinite;
-        }
-        .kl-gold-line {
-          height: 1px;
-          background: linear-gradient(90deg, transparent, rgba(245,193,92,.5), transparent);
-        }
-        .kl-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        .kl-table { min-width: 720px; }
-        .kl-table tbody tr { transition: background 150ms ease; }
-        .kl-table tbody tr:hover { background: rgba(245,193,92,.035); }
-        .kl-menu-select:focus { outline: 2px solid rgba(245,193,92,.35); outline-offset: 2px; }
-        @keyframes kl-pulse {
-          0%, 100% { opacity: 1; transform: scale(1); }
-          50% { opacity: .55; transform: scale(.82); }
-        }
-        @keyframes kl-appear {
-          from { opacity: 0; transform: translateY(5px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .kl-appear { animation: kl-appear 350ms ease both; }
-        @media (max-width: 540px) {
-          .kl-main { padding: 19px 12px 38px !important; }
-          .kl-heading { font-size: 26px !important; }
-          .kl-panel { padding: 16px !important; border-radius: 17px !important; }
-          .kl-status-time { text-align: left !important; width: 100%; }
-          .kl-signal-value { font-size: 31px !important; }
-          .kl-stat-value { font-size: 21px !important; }
-          .kl-header-subtitle { font-size: 12px !important; }
-        }
-        @media (prefers-reduced-motion: reduce) {
-          *, *::before, *::after {
-            animation-duration: .01ms !important;
-            animation-iteration-count: 1 !important;
-            transition-duration: .01ms !important;
-          }
-        }
-      `}</style>
-
-      <div className="kl-main" style={{ maxWidth: 1120, margin: "0 auto" }}>
-        {/* HEADER */}
+      <div style={{ maxWidth: 1120, margin: "0 auto" }}>
         <header
           style={{
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            gap: 14,
-            marginBottom: 27,
-            position: "relative",
+            gap: 12,
+            marginBottom: 22,
           }}
         >
-          <div style={{ minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
             <div
               style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 9,
-                color: colors.gold,
-                fontSize: 10,
-                letterSpacing: 2.7,
-                fontWeight: 800,
+                width: 42,
+                height: 42,
+                borderRadius: 13,
+                display: "grid",
+                placeItems: "center",
+                background: "linear-gradient(135deg, #f2d675, #a87c18)",
+                color: "#100e08",
+                fontWeight: 900,
+                fontSize: 16,
+                boxShadow: "0 4px 25px rgba(212,175,55,0.15)",
               }}
             >
-              <span
+              KL
+            </div>
+            <div>
+              <div
                 style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  width: 28,
-                  height: 28,
-                  border: "1px solid rgba(245,193,92,.65)",
-                  borderRadius: 9,
-                  background:
-                    "linear-gradient(145deg, rgba(245,193,92,.18), rgba(245,193,92,.025))",
-                  fontSize: 12,
-                  letterSpacing: -1,
-                  boxShadow: "0 0 18px rgba(245,193,92,.08)",
+                  fontSize: 19,
+                  fontWeight: 900,
+                  letterSpacing: 1.1,
                 }}
               >
-                KL
-              </span>
-              <span>GOLD TRADING SYSTEM</span>
+                Keli<span style={{ color: C.gold }}>Leli</span>bot
+              </div>
+              <div style={{ ...label, fontSize: 9, marginTop: 3 }}>
+                GOLD TRADING SYSTEM
+              </div>
             </div>
-
-            <h1
-              className="kl-heading"
-              style={{
-                fontSize: 34,
-                letterSpacing: -1.5,
-                margin: "12px 0 7px",
-                fontWeight: 850,
-                lineHeight: 1.1,
-              }}
-            >
-              Keli<span style={{ color: colors.gold }}>Leli</span>
-              <span style={{ color: "#777" }}>bot</span>
-            </h1>
-
-            <p
-              className="kl-header-subtitle"
-              style={{ color: "#929292", margin: 0, fontSize: 13 }}
-            >
-              XAU/USD <span style={{ color: "#555" }}>·</span> EMA 9/21/200
-              <span style={{ color: "#555" }}> · </span> RSI 14
-            </p>
           </div>
 
-          {/* Menuja e vetme */}
-          <div style={{ position: "relative", flexShrink: 0 }}>
-            <button
-              className="kl-menu-button"
-              onClick={() => setMenuOpen((open) => !open)}
-              aria-label={menuOpen ? "Mbyll menune" : "Hap menune"}
-              aria-expanded={menuOpen}
-              style={{
-                width: 48,
-                height: 48,
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: 5,
-                background: menuOpen
-                  ? `linear-gradient(135deg, ${colors.goldBright}, ${colors.gold})`
-                  : "rgba(245,193,92,.055)",
-                border: "1px solid rgba(245,193,92,.4)",
-                borderRadius: 15,
-                cursor: "pointer",
-                transition: "all 180ms ease",
-                boxShadow: "0 5px 22px rgba(0,0,0,.22)",
-              }}
-            >
-              {[0, 1, 2].map((line) => (
+          <button
+            aria-label={menuOpen ? t("done") : t("menu")}
+            title={t("menu")}
+            onClick={() => setMenuOpen((value) => !value)}
+            style={{
+              width: 38,
+              height: 38,
+              padding: 0,
+              flexShrink: 0,
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: menuOpen ? 0 : 4,
+              borderRadius: 10,
+              border: `1px solid ${C.border}`,
+              background: C.panel,
+              color: C.gold2,
+              cursor: "pointer",
+              position: "relative",
+            }}
+          >
+            {menuOpen ? (
+              <span
+                style={{
+                  display: "block",
+                  width: 17,
+                  height: 17,
+                  position: "relative",
+                }}
+              >
                 <span
-                  key={line}
-                  style={{
-                    width: line === 1 ? 16 : 20,
-                    height: 2,
-                    background: menuOpen ? "#17120a" : colors.gold,
-                    borderRadius: 4,
-                    transition: "all 180ms ease",
-                  }}
-                />
-              ))}
-            </button>
-
-            {menuOpen && (
-              <>
-                <button
-                  aria-label="Mbyll menune"
-                  onClick={() => setMenuOpen(false)}
-                  style={{
-                    position: "fixed",
-                    inset: 0,
-                    zIndex: 40,
-                    background: "transparent",
-                    border: "none",
-                    cursor: "default",
-                  }}
-                />
-
-                <div
-                  className="kl-appear"
                   style={{
                     position: "absolute",
-                    zIndex: 41,
-                    top: 59,
-                    right: 0,
-                    width: "min(320px, calc(100vw - 28px))",
-                    padding: 19,
-                    background: "rgba(17,17,17,.98)",
-                    border: "1px solid rgba(245,193,92,.3)",
-                    borderRadius: 19,
-                    boxShadow: "0 22px 65px rgba(0,0,0,.72), 0 0 30px rgba(245,193,92,.045)",
-                    backdropFilter: "blur(20px)",
+                    left: 0,
+                    top: 7.5,
+                    width: 17,
+                    height: 1.5,
+                    borderRadius: 2,
+                    background: C.gold2,
+                    transform: "rotate(45deg)",
+                    transformOrigin: "center",
                   }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      gap: 10,
-                      marginBottom: 18,
-                    }}
-                  >
-                    <div>
-                      <SectionLabel>Personalizo</SectionLabel>
-                      <h2 style={{ fontSize: 19, margin: "7px 0 0" }}>
-                        Ora dhe zona
-                      </h2>
-                    </div>
-
-                    <button
-                      onClick={() => setMenuOpen(false)}
-                      aria-label="Mbyll"
-                      style={{
-                        width: 33,
-                        height: 33,
-                        borderRadius: 10,
-                        border: `1px solid ${colors.border}`,
-                        background: "#101010",
-                        color: "#eee",
-                        fontSize: 20,
-                        cursor: "pointer",
-                      }}
-                    >
-                      ×
-                    </button>
-                  </div>
-
-                  <label
-                    htmlFor="timezone"
-                    style={{
-                      display: "block",
-                      color: colors.muted,
-                      fontSize: 12,
-                      marginBottom: 8,
-                    }}
-                  >
-                    Zgjidh zonen kohore
-                  </label>
-
-                  <select
-                    id="timezone"
-                    className="kl-menu-select"
-                    value={selectedZone}
-                    onChange={(event) => setSelectedZone(event.target.value)}
-                    style={{
-                      width: "100%",
-                      background: "#0a0a0a",
-                      color: colors.text,
-                      border: "1px solid rgba(245,193,92,.38)",
-                      borderRadius: 12,
-                      padding: "13px 11px",
-                      fontSize: 14,
-                    }}
-                  >
-                    {timeZones.map((place) => (
-                      <option key={place.zone} value={place.zone}>
-                        {place.flag} {place.name}
-                      </option>
-                    ))}
-                  </select>
-
-                  <div
-                    style={{
-                      marginTop: 16,
-                      padding: 16,
-                      background:
-                        "linear-gradient(145deg, rgba(245,193,92,.09), rgba(255,255,255,.015))",
-                      border: "1px solid rgba(245,193,92,.2)",
-                      borderRadius: 15,
-                    }}
-                  >
-                    <div style={{ color: colors.muted, fontSize: 12 }}>
-                      {activePlace.flag} Ora ne {activePlace.name}
-                    </div>
-
-                    <div
-                      style={{
-                        color: colors.goldBright,
-                        fontSize: 30,
-                        fontWeight: 850,
-                        letterSpacing: -0.8,
-                        marginTop: 7,
-                        fontVariantNumeric: "tabular-nums",
-                      }}
-                    >
-                      {now ? getLocalTime(selectedZone, now) : "--:--:--"}
-                    </div>
-
-                    <div style={{ color: "#858585", fontSize: 12, marginTop: 5 }}>
-                      {now ? getLocalDate(selectedZone, now) : "--"}
-                    </div>
-                  </div>
-
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      color: "#8d8d8d",
-                      fontSize: 11,
-                      marginTop: 15,
-                    }}
-                  >
-                    <span className="kl-live-dot" />
-                    Ora perditesohet automatikisht
-                  </div>
-
-                  <button
-                    className="kl-button"
-                    onClick={() => setMenuOpen(false)}
-                    style={{ ...buttonStyle, width: "100%", marginTop: 17 }}
-                  >
-                    U krye
-                  </button>
-                </div>
+                />
+                <span
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    top: 7.5,
+                    width: 17,
+                    height: 1.5,
+                    borderRadius: 2,
+                    background: C.gold2,
+                    transform: "rotate(-45deg)",
+                    transformOrigin: "center",
+                  }}
+                />
+              </span>
+            ) : (
+              <>
+                <span
+                  style={{
+                    width: 16,
+                    height: 1.5,
+                    borderRadius: 2,
+                    background: C.gold2,
+                    display: "block",
+                  }}
+                />
+                <span
+                  style={{
+                    width: 11,
+                    height: 1.5,
+                    borderRadius: 2,
+                    background: C.gold2,
+                    display: "block",
+                  }}
+                />
+                <span
+                  style={{
+                    width: 16,
+                    height: 1.5,
+                    borderRadius: 2,
+                    background: C.gold2,
+                    display: "block",
+                  }}
+                />
               </>
             )}
-          </div>
+          </button>
         </header>
 
-        {/* STATUS BAR */}
-        <div
-          className="kl-card kl-panel"
-          style={{
-            ...panelStyle,
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            flexWrap: "wrap",
-            gap: 17,
-            marginBottom: 20,
-            padding: "17px 20px",
-          }}
-        >
-          <div>
+        {menuOpen && (
+          <section
+            style={{
+              ...panel,
+              marginBottom: 20,
+              padding: 18,
+              animation: "fadeIn 160ms ease-out",
+            }}
+          >
             <div
               style={{
                 display: "flex",
+                justifyContent: "space-between",
                 alignItems: "center",
-                gap: 9,
-                fontSize: 13,
-                fontWeight: 750,
+                marginBottom: 18,
+                gap: 12,
               }}
             >
-              <span className="kl-live-dot" />
-              <span>Sistemi aktiv ne faqe</span>
-            </div>
-            <div style={{ color: "#828282", fontSize: 11, marginTop: 7 }}>
-              Rifreskim automatik cdo 60 sekonda
-            </div>
-          </div>
+              <div style={{ fontSize: 15, fontWeight: 800 }}>
+                {t("menu")}
+              </div>
 
-          <div className="kl-status-time" style={{ textAlign: "right" }}>
-            <div style={{ color: "#858585", fontSize: 11 }}>
-              ZONA KOHORE AKTIVE
-            </div>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 9,
-                marginTop: 6,
-                fontSize: 13,
-                fontWeight: 750,
-              }}
-            >
-              <span>{activePlace.flag} {activePlace.name}</span>
-              <span
+              <button
+                onClick={() => setMenuOpen(false)}
+                aria-label={t("done")}
                 style={{
-                  color: colors.gold,
-                  fontVariantNumeric: "tabular-nums",
-                  fontWeight: 800,
+                  width: 30,
+                  height: 30,
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  padding: 0,
+                  borderRadius: 8,
+                  border: `1px solid ${C.border}`,
+                  background: "#191a1d",
+                  color: C.gold2,
+                  cursor: "pointer",
+                  lineHeight: 1,
                 }}
               >
-                {now ? getLocalTime(selectedZone, now) : "--:--:--"}
-              </span>
+                <span
+                  style={{
+                    display: "block",
+                    fontSize: 21,
+                    lineHeight: "20px",
+                    height: 20,
+                    transform: "translateY(-1px)",
+                  }}
+                >
+                  ×
+                </span>
+              </button>
             </div>
-          </div>
-        </div>
 
-        {/* SINJALI AKTUAL */}
-        <section
-          className="kl-card kl-panel kl-appear"
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                gap: 16,
+              }}
+            >
+              <div>
+                <label
+                  htmlFor="language-select"
+                  style={{ ...label, display: "block", marginBottom: 9 }}
+                >
+                  {t("language")}
+                </label>
+                <select
+                  id="language-select"
+                  value={language}
+                  onChange={(event) => setLanguage(event.target.value as Lang)}
+                  style={{
+                    width: "100%",
+                    padding: "12px",
+                    borderRadius: 10,
+                    border: `1px solid ${C.border}`,
+                    background: "#0b0c0e",
+                    color: C.text,
+                    outline: "none",
+                    fontSize: 13,
+                  }}
+                >
+                  {languages.map((item) => (
+                    <option key={item.code} value={item.code}>
+                      {item.flag} {item.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="timezone-select"
+                  style={{ ...label, display: "block", marginBottom: 9 }}
+                >
+                  {t("timezone")}
+                </label>
+                <select
+                  id="timezone-select"
+                  value={selectedZone}
+                  onChange={(event) => setSelectedZone(event.target.value)}
+                  style={{
+                    width: "100%",
+                    padding: "12px",
+                    borderRadius: 10,
+                    border: `1px solid ${C.border}`,
+                    background: "#0b0c0e",
+                    color: C.text,
+                    outline: "none",
+                    fontSize: 13,
+                  }}
+                >
+                  {timeZones.map((zone) => (
+                    <option key={zone.zone} value={zone.zone}>
+                      {zone.flag} {zone.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div
+              style={{
+                marginTop: 17,
+                padding: 13,
+                borderRadius: 11,
+                background: "rgba(212,175,55,0.055)",
+                border: `1px solid ${C.border}`,
+              }}
+            >
+              <div style={label}>{t("activeZone")}</div>
+              <div
+                style={{
+                  marginTop: 7,
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: 8,
+                }}
+              >
+                <span style={{ fontSize: 13, fontWeight: 700 }}>
+                  {currentZone?.flag} {currentZone?.name ?? selectedZone}
+                </span>
+                <span style={{ color: C.gold2, fontSize: 13 }}>
+                  {new Intl.DateTimeFormat(language, {
+                    timeZone: selectedZone,
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    second: "2-digit",
+                  }).format(now)}
+                </span>
+              </div>
+              <div style={{ fontSize: 11, color: C.muted, marginTop: 7 }}>
+                {t("systemTime")}
+              </div>
+            </div>
+
+            <button
+              onClick={() => setMenuOpen(false)}
+              style={{ ...buttonStyle, width: "100%", marginTop: 15 }}
+            >
+              {t("done")}
+            </button>
+          </section>
+        )}
+
+        <div
           style={{
-            ...panelStyle,
-            position: "relative",
-            overflow: "hidden",
-            marginBottom: 27,
-            borderColor: isBuy
-              ? "rgba(74,222,128,.28)"
-              : isSell
-                ? "rgba(251,113,133,.28)"
-                : "rgba(245,193,92,.32)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+            flexWrap: "wrap",
+            marginBottom: 22,
+            padding: "12px 15px",
+            borderRadius: 12,
+            background: "rgba(49,214,154,0.045)",
+            border: "1px solid rgba(49,214,154,0.15)",
           }}
         >
-          <div
-            style={{
-              position: "absolute",
-              top: -95,
-              right: -70,
-              width: 240,
-              height: 240,
-              borderRadius: "50%",
-              background: signalColor,
-              opacity: 0.055,
-              filter: "blur(65px)",
-              pointerEvents: "none",
-            }}
-          />
+          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+            <span
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: "50%",
+                background: C.green,
+                boxShadow: `0 0 10px ${C.green}`,
+              }}
+            />
+            <span style={{ fontSize: 12, color: C.green, fontWeight: 700 }}>
+              {t("active")}
+            </span>
+          </div>
+          <span style={{ fontSize: 11, color: C.muted }}>
+            {t("auto")}
+          </span>
+        </div>
 
+        <section style={{ ...panel, marginBottom: 20 }}>
           <div
             style={{
               display: "flex",
               justifyContent: "space-between",
               alignItems: "flex-start",
-              flexWrap: "wrap",
               gap: 14,
-              position: "relative",
+              flexWrap: "wrap",
             }}
           >
             <div>
-              <SectionLabel>Sinjali aktual · XAU/USD</SectionLabel>
-              <div
+              <div style={label}>XAU/USD · GOLD</div>
+              <h1
                 style={{
-                  color: "#858585",
-                  fontSize: 12,
-                  marginTop: 8,
+                  fontSize: 22,
+                  fontWeight: 850,
+                  margin: "8px 0 5px",
+                  letterSpacing: -0.4,
                 }}
               >
-                Analiza e fundit e tregut
+                {t("currentSignal")}
+              </h1>
+              <div style={{ color: C.muted, fontSize: 12 }}>
+                {t("marketAnalysis")}
               </div>
             </div>
 
             <div
               style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 7,
-                padding: "7px 10px",
-                borderRadius: 100,
-                border: `1px solid ${signalColor}40`,
-                background: `${signalColor}0D`,
-                color: signalColor,
-                fontSize: 10,
-                fontWeight: 800,
-                letterSpacing: 1,
+                textAlign: "right",
+                minWidth: 100,
+                marginInlineStart: "auto",
               }}
             >
-              <span
+              <div style={label}>{t("currentPrice")}</div>
+              <div
                 style={{
-                  width: 6,
-                  height: 6,
-                  background: signalColor,
-                  borderRadius: "50%",
+                  color: C.gold2,
+                  fontSize: 25,
+                  fontWeight: 850,
+                  marginTop: 6,
                 }}
-              />
-              XAU/USD
+              >
+                {price !== undefined ? money(price) : "—"}
+              </div>
             </div>
           </div>
 
           <div
-            className="kl-gold-line"
-            style={{ margin: "19px 0 20px" }}
-          />
-
-          <div
             style={{
+              marginTop: 22,
+              border: `1px solid ${signalColor}35`,
+              background: `${signalColor}0c`,
+              borderRadius: 15,
+              padding: "21px 18px",
               display: "flex",
-              alignItems: "center",
               justifyContent: "space-between",
+              alignItems: "center",
+              gap: 14,
               flexWrap: "wrap",
-              gap: 15,
-              position: "relative",
             }}
           >
             <div>
+              <div style={{ ...label, marginBottom: 8 }}>
+                {isBuy
+                  ? t("buySignal")
+                  : isSell
+                    ? t("sellSignal")
+                    : t("waiting")}
+              </div>
               <div
-                className="kl-signal-value"
                 style={{
-                  fontSize: 39,
-                  lineHeight: 1.05,
-                  letterSpacing: -1,
+                  fontSize: 28,
                   fontWeight: 900,
+                  letterSpacing: 1.4,
                   color: signalColor,
-                  textShadow: `0 0 28px ${signalColor}20`,
                 }}
               >
-                {signalLoading && !signal ? "Duke ngarkuar..." : signalName}
+                {signalLoading ? t("loading") : signalLabel}
               </div>
-              <div style={{ color: "#999", fontSize: 12, marginTop: 9 }}>
-                {signalDescription}
-              </div>
+              {signal?.reason && (
+                <div
+                  style={{
+                    color: C.muted,
+                    fontSize: 12,
+                    marginTop: 10,
+                    maxWidth: 600,
+                    lineHeight: 1.6,
+                  }}
+                >
+                  {String(signal.reason)}
+                </div>
+              )}
             </div>
 
-            <div
+            <button
+              onClick={() => void refreshSignal()}
+              disabled={signalLoading}
               style={{
-                padding: "13px 16px",
-                minWidth: 125,
-                borderRadius: 14,
-                border: `1px solid ${signalColor}2B`,
-                background: `${signalColor}09`,
+                ...buttonStyle,
+                opacity: signalLoading ? 0.6 : 1,
+                cursor: signalLoading ? "wait" : "pointer",
               }}
             >
-              <div style={smallLabelStyle}>CMIMI AKTUAL</div>
-              <div
-                style={{
-                  fontSize: 22,
-                  fontWeight: 850,
-                  marginTop: 7,
-                  fontVariantNumeric: "tabular-nums",
-                }}
-              >
-                {displayValue(findValue(signal ?? {}, ["price", "close"]))}
-              </div>
-            </div>
+              {signalLoading ? t("loading") : t("refreshSignal")}
+            </button>
           </div>
 
           {signalError && (
             <div
               style={{
-                marginTop: 17,
-                padding: 12,
-                borderRadius: 11,
-                background: "rgba(251,113,133,.07)",
-                border: "1px solid rgba(251,113,133,.2)",
-                color: colors.red,
+                marginTop: 13,
+                color: C.red,
                 fontSize: 12,
+                overflowWrap: "anywhere",
               }}
             >
-              Gabim sinjali: {signalError}
-            </div>
-          )}
-
-          {signal?.reason && (
-            <div
-              style={{
-                marginTop: 17,
-                padding: 13,
-                borderRadius: 12,
-                background: "rgba(255,255,255,.025)",
-                border: "1px solid rgba(255,255,255,.06)",
-                color: "#bdbdbd",
-                fontSize: 13,
-                lineHeight: 1.6,
-              }}
-            >
-              <span style={{ color: colors.gold, fontWeight: 800 }}>
-                Arsyeja:{" "}
-              </span>
-              {signal.reason}
+              {t("errorSignal")}: {signalError}
             </div>
           )}
 
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(115px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(125px, 1fr))",
               gap: 10,
-              marginTop: 23,
+              marginTop: 16,
             }}
           >
             {[
-              {
-                label: "RSI 14",
-                value: signal?.rsi,
-                detail: "Momentum",
-              },
-              {
-                label: "EMA 9",
-                value: signal?.ema9,
-                detail: "Afatshkurter",
-              },
-              {
-                label: "EMA 21",
-                value: signal?.ema21,
-                detail: "Afatmesem",
-              },
-              {
-                label: "EMA 200",
-                value: signal?.ema200,
-                detail: "Tendenca",
-              },
+              { title: "RSI", value: rsi },
+              { title: "EMA 9", value: ema9 },
+              { title: "EMA 21", value: ema21 },
+              { title: "EMA 200", value: ema200 },
             ].map((item) => (
               <div
-                key={item.label}
+                key={item.title}
                 style={{
-                  background: "rgba(255,255,255,.025)",
-                  border: "1px solid rgba(255,255,255,.065)",
-                  borderRadius: 14,
-                  padding: 14,
-                  minWidth: 0,
+                  border: "1px solid rgba(255,255,255,0.055)",
+                  background: C.panel2,
+                  borderRadius: 12,
+                  padding: 13,
                 }}
               >
-                <div style={smallLabelStyle}>{item.label}</div>
+                <div style={label}>{item.title}</div>
                 <div
                   style={{
-                    fontSize: 19,
+                    color: C.text,
+                    fontSize: 17,
                     fontWeight: 800,
-                    marginTop: 10,
-                    overflowWrap: "anywhere",
-                    fontVariantNumeric: "tabular-nums",
+                    marginTop: 7,
                   }}
                 >
-                  {displayValue(item.value)}
-                </div>
-                <div style={{ color: "#707070", fontSize: 10, marginTop: 6 }}>
-                  {item.detail}
+                  {item.value === undefined || item.value === null
+                    ? "—"
+                    : String(item.value)}
                 </div>
               </div>
             ))}
@@ -1104,91 +1298,68 @@ export default function Home() {
           <div
             style={{
               display: "flex",
+              justifyContent: "space-between",
+              gap: 10,
               flexWrap: "wrap",
-              gap: 8,
-              marginTop: 19,
-              color: "#777",
-              fontSize: 11,
+              marginTop: 16,
+              color: C.muted,
+              fontSize: 10,
             }}
           >
             <span>
-              Koha e sinjalit:{" "}
-              <span style={{ color: "#b1b1b1" }}>
-                {signalTimestamp
-                  ? formatDateTimeInZone(signalTimestamp, selectedZone)
-                  : "--"}
-              </span>
+              {t("signalTime")}: {dateInZone(signalTimestamp, selectedZone)}
             </span>
-            <span style={{ color: "#454545" }}>·</span>
             <span>
-              Perditesuar:{" "}
-              <span style={{ color: "#b1b1b1" }}>
-                {lastSignalUpdate
-                  ? formatDateTimeInZone(lastSignalUpdate, selectedZone)
-                  : "--"}
-              </span>
+              {t("updated")}: {dateInZone(lastUpdate, selectedZone)}
             </span>
           </div>
-
-          <button
-            className="kl-button"
-            onClick={() => void refreshSignal()}
-            disabled={signalLoading}
-            style={{ ...buttonStyle, marginTop: 19 }}
-          >
-            {signalLoading ? "Duke ngarkuar..." : "↻  Rifresko sinjalin"}
-          </button>
         </section>
 
-        {/* BACKTEST */}
-        <section style={{ marginBottom: 28 }}>
+        <section style={{ ...panel, marginBottom: 20 }}>
           <div
             style={{
               display: "flex",
-              justifyContent: "space-between",
               alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
               flexWrap: "wrap",
-              gap: 13,
-              marginBottom: 16,
+              marginBottom: 20,
             }}
           >
             <div>
-              <SectionLabel>Performanca</SectionLabel>
+              <div style={label}>{t("performance")}</div>
               <h2
                 style={{
-                  fontSize: 23,
-                  letterSpacing: -0.6,
                   margin: "7px 0 0",
+                  fontSize: 20,
+                  fontWeight: 850,
                 }}
               >
-                Backtest automatik
+                {t("strategyStats")}
               </h2>
-              <p style={{ color: "#858585", fontSize: 12, margin: "6px 0 0" }}>
-                Statistikat e strategjise
-              </p>
             </div>
-
             <button
-              className="kl-button"
               onClick={() => void refreshBacktest()}
               disabled={backtestLoading}
-              style={buttonStyle}
+              style={{
+                ...buttonStyle,
+                opacity: backtestLoading ? 0.6 : 1,
+              }}
             >
-              {backtestLoading ? "Duke llogaritur..." : "↻  Rillogarit"}
+              {backtestLoading ? t("loadingStats") : t("recalculate")}
             </button>
           </div>
 
           {backtestError && (
             <div
-              className="kl-panel"
               style={{
-                ...panelStyle,
-                color: colors.red,
-                marginBottom: 14,
-                fontSize: 13,
+                color: C.red,
+                fontSize: 12,
+                marginBottom: 15,
+                overflowWrap: "anywhere",
               }}
             >
-              Gabim backtest-i: {backtestError}
+              {t("errorBacktest")}: {backtestError}
             </div>
           )}
 
@@ -1196,416 +1367,312 @@ export default function Home() {
             style={{
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(145px, 1fr))",
-              gap: 12,
+              gap: 11,
             }}
           >
-            {statCards.map((item) => (
+            {stats.map((stat) => (
               <div
-                key={item.label}
-                className="kl-card kl-panel"
+                key={stat.title}
                 style={{
-                  ...panelStyle,
-                  padding: 17,
+                  background: C.panel2,
+                  border: "1px solid rgba(255,255,255,0.055)",
+                  borderRadius: 13,
+                  padding: 15,
                   minWidth: 0,
-                  position: "relative",
-                  overflow: "hidden",
                 }}
               >
+                <div style={label}>{stat.title}</div>
                 <div
                   style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    gap: 8,
-                  }}
-                >
-                  <div style={labelStyle}>{item.label}</div>
-                  <span
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      width: 27,
-                      height: 27,
-                      borderRadius: 9,
-                      background: `${item.accent}12`,
-                      border: `1px solid ${item.accent}25`,
-                      color: item.accent,
-                      fontSize: 13,
-                      fontWeight: 900,
-                    }}
-                  >
-                    {item.icon}
-                  </span>
-                </div>
-
-                <div
-                  className="kl-stat-value"
-                  style={{
-                    fontSize: 24,
+                    marginTop: 11,
+                    fontSize: 22,
                     fontWeight: 850,
-                    letterSpacing: -0.6,
-                    marginTop: 16,
+                    color: stat.color,
                     overflowWrap: "anywhere",
-                    fontVariantNumeric: "tabular-nums",
                   }}
                 >
-                  {item.value}
+                  {backtestLoading ? "—" : stat.value}
                 </div>
-
-                <div
-                  style={{
-                    height: 2,
-                    width: 29,
-                    borderRadius: 5,
-                    background: item.accent,
-                    opacity: 0.7,
-                    marginTop: 14,
-                  }}
-                />
               </div>
             ))}
           </div>
 
           <div
-            className="kl-card kl-panel"
             style={{
-              ...panelStyle,
-              marginTop: 13,
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: 16,
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(170px, 1fr))",
+              gap: 11,
+              marginTop: 12,
             }}
           >
-            <div>
-              <div style={smallLabelStyle}>KAPITALI FILLESTAR</div>
-              <div
-                style={{
-                  fontSize: 23,
-                  fontWeight: 850,
-                  marginTop: 9,
-                  letterSpacing: -0.4,
-                }}
-              >
-                {displayValue(startingCapital)}
-              </div>
-            </div>
-
             <div
               style={{
-                width: 1,
-                height: 43,
-                background: "rgba(255,255,255,.09)",
-              }}
-            />
-
-            <div style={{ flex: 1, minWidth: 145 }}>
-              <div style={smallLabelStyle}>BACKTEST-I I FUNDIT</div>
-              <div style={{ fontSize: 12, color: "#b4b4b4", marginTop: 9 }}>
-                {lastBacktestUpdate
-                  ? formatDateTimeInZone(lastBacktestUpdate, selectedZone)
-                  : "--"}
-              </div>
-            </div>
-
-            <div
-              style={{
-                padding: "8px 11px",
-                borderRadius: 10,
-                background: "rgba(245,193,92,.06)",
-                border: "1px solid rgba(245,193,92,.15)",
-                color: colors.gold,
-                fontSize: 10,
-                fontWeight: 800,
-                letterSpacing: 1,
+                background: "rgba(212,175,55,0.045)",
+                border: `1px solid ${C.border}`,
+                borderRadius: 12,
+                padding: 14,
               }}
             >
-              HISTORIK
+              <div style={label}>{t("startingCapital")}</div>
+              <div
+                style={{
+                  fontSize: 17,
+                  fontWeight: 800,
+                  marginTop: 8,
+                  color: C.gold2,
+                }}
+              >
+                {money(startingCapital)}
+              </div>
+            </div>
+            <div
+              style={{
+                background: "rgba(212,175,55,0.045)",
+                border: `1px solid ${C.border}`,
+                borderRadius: 12,
+                padding: 14,
+              }}
+            >
+              <div style={label}>{t("lastBacktest")}</div>
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  marginTop: 9,
+                  lineHeight: 1.5,
+                }}
+              >
+                {dateInZone(
+                  first(backtest, "timestamp", "updatedAt", "lastRun", "date"),
+                  selectedZone
+                )}
+              </div>
             </div>
           </div>
         </section>
 
-        {/* TREGTIMET E FUNDIT */}
-        <section
-          className="kl-card kl-panel"
-          style={{ ...panelStyle, padding: 20 }}
-        >
+        <section style={panel}>
           <div
             style={{
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
-              flexWrap: "wrap",
               gap: 12,
-              marginBottom: 9,
+              flexWrap: "wrap",
+              marginBottom: 17,
             }}
           >
             <div>
-              <SectionLabel>Historiku</SectionLabel>
+              <div style={label}>{t("history")}</div>
               <h2
                 style={{
-                  fontSize: 22,
-                  letterSpacing: -0.5,
+                  fontSize: 20,
+                  fontWeight: 850,
                   margin: "7px 0 0",
                 }}
               >
-                Tregtimet e fundit
+                {t("recentTrades")}
               </h2>
             </div>
-
-            <div
+            <span
               style={{
-                border: `1px solid ${colors.border}`,
-                borderRadius: 10,
-                padding: "7px 10px",
-                color: "#aaa",
+                color: C.gold2,
                 fontSize: 11,
+                background: "rgba(212,175,55,0.08)",
+                border: `1px solid ${C.border}`,
+                borderRadius: 20,
+                padding: "7px 10px",
               }}
             >
-              {trades.length} tregtime
-            </div>
+              {tradeList.length} {t("trades").toLowerCase()}
+            </span>
           </div>
-
-          <p style={{ color: "#858585", fontSize: 12, marginBottom: 18 }}>
-            Oret shfaqen sipas zones aktive: {getZoneName(selectedZone)}.
-          </p>
-
-          {trades.length === 0 ? (
-            <div
-              style={{
-                padding: "35px 15px",
-                textAlign: "center",
-                background: "rgba(255,255,255,.018)",
-                border: "1px dashed rgba(245,193,92,.16)",
-                borderRadius: 15,
-              }}
-            >
-              <div style={{ fontSize: 25, marginBottom: 12, color: colors.gold }}>
-                ◇
-              </div>
-              <div style={{ color: "#c5c5c5", fontSize: 13, fontWeight: 700 }}>
-                {backtestLoading
-                  ? "Duke ngarkuar tregtimet..."
-                  : "Nuk ka tregtime per tu shfaqur"}
-              </div>
-              <div
-                style={{
-                  color: "#777",
-                  fontSize: 11,
-                  marginTop: 7,
-                  lineHeight: 1.6,
-                }}
-              >
-                {backtestLoading
-                  ? "Po marrim te dhenat e fundit."
-                  : "Kontrollo nese API-ja e backtest-it kthen listen e tregtimeve."}
-              </div>
-            </div>
-          ) : (
-            <div className="kl-table-wrap">
-              <table
-                className="kl-table"
-                style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                  textAlign: "left",
-                  fontSize: 12,
-                }}
-              >
-                <thead>
-                  <tr style={{ color: "#8f8f8f" }}>
-                    {[
-                      "Drejtimi",
-                      "Hyrja",
-                      "Ora e hyrjes",
-                      "Dalja",
-                      "Ora e daljes",
-                      "Rezultati",
-                      "Kthimi",
-                    ].map((heading) => (
-                      <th
-                        key={heading}
-                        style={{
-                          padding: "13px 12px",
-                          borderBottom: "1px solid rgba(245,193,92,.18)",
-                          whiteSpace: "nowrap",
-                          fontSize: 10,
-                          fontWeight: 800,
-                          letterSpacing: 0.8,
-                        }}
-                      >
-                        {heading.toUpperCase()}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {trades.map((trade, index) => {
-                    const rawResult = String(trade.result ?? "").toUpperCase();
-
-                    const numericResult = findValue(trade, [
-                      "netReturnPct",
-                      "netPct",
-                      "pnlPct",
-                      "pnl",
-                      "profit",
-                    ]);
-
-                    const resultNumber =
-                      typeof numericResult === "number"
-                        ? numericResult
-                        : typeof numericResult === "string" &&
-                            numericResult.trim() !== ""
-                          ? Number(numericResult)
-                          : undefined;
-
-                    const isWin =
-                      rawResult === "WIN" ||
-                      (rawResult !== "LOSS" &&
-                        rawResult !== "LOSE" &&
-                        typeof resultNumber === "number" &&
-                        resultNumber > 0);
-
-                    const isLoss =
-                      rawResult === "LOSS" ||
-                      rawResult === "LOSE" ||
-                      (rawResult !== "WIN" &&
-                        typeof resultNumber === "number" &&
-                        resultNumber < 0);
-
-                    const resultLabel =
-                      rawResult === "BREAKEVEN" || rawResult === "BREAK_EVEN"
-                        ? "BREAKEVEN"
-                        : isWin
-                          ? "WIN"
-                          : isLoss
-                            ? "LOSE"
-                            : rawResult || "--";
-
-                    const resultColor =
-                      resultLabel === "WIN"
-                        ? colors.green
-                        : resultLabel === "LOSE"
-                          ? colors.red
-                          : colors.gold;
-
-                    const returnText =
-                      typeof resultNumber === "number" &&
-                      Number.isFinite(resultNumber)
-                        ? `${resultNumber > 0 ? "+" : ""}${resultNumber.toFixed(2)}%`
-                        : "--";
-
-                    const side = String(trade.side ?? "--").toUpperCase();
-                    const sideColor =
-                      side.includes("BUY") || side.includes("LONG")
-                        ? colors.green
-                        : side.includes("SELL") || side.includes("SHORT")
-                          ? colors.red
-                          : "#c4c4c4";
-
-                    return (
-                      <tr
-                        key={`${index}-${String(
-                          trade.entryTime ?? trade.entryPrice ?? trade.entry ?? ""
-                        )}`}
-                      >
-                        <td style={{ ...cellStyle, color: sideColor, fontWeight: 800 }}>
-                          {side}
-                        </td>
-
-                        <td style={cellStyle}>
-                          {displayValue(trade.entryPrice ?? trade.entry)}
-                        </td>
-
-                        <td style={{ ...cellStyle, color: "#9d9d9d" }}>
-                          {formatDateTimeInZone(trade.entryTime, selectedZone)}
-                        </td>
-
-                        <td style={cellStyle}>
-                          {displayValue(trade.exitPrice ?? trade.exit)}
-                        </td>
-
-                        <td style={{ ...cellStyle, color: "#9d9d9d" }}>
-                          {formatDateTimeInZone(trade.exitTime, selectedZone)}
-                        </td>
-
-                        <td style={cellStyle}>
-                          <span
-                            style={{
-                              display: "inline-block",
-                              padding: "5px 8px",
-                              borderRadius: 7,
-                              color: resultColor,
-                              background: `${resultColor}10`,
-                              border: `1px solid ${resultColor}25`,
-                              fontSize: 10,
-                              fontWeight: 900,
-                              letterSpacing: 0.5,
-                            }}
-                          >
-                            {resultLabel}
-                          </span>
-                        </td>
-
-                        <td
-                          style={{
-                            ...cellStyle,
-                            color:
-                              typeof resultNumber === "number" && resultNumber > 0
-                                ? colors.green
-                                : typeof resultNumber === "number" &&
-                                    resultNumber < 0
-                                  ? colors.red
-                                  : "#9b9b9b",
-                            fontWeight: 850,
-                            fontVariantNumeric: "tabular-nums",
-                          }}
-                        >
-                          {returnText}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
 
           <div
             style={{
-              marginTop: 19,
-              paddingTop: 15,
-              borderTop: "1px solid rgba(255,255,255,.06)",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: 8,
-              color: "#777",
-              fontSize: 10,
+              width: "100%",
+              overflowX: "auto",
+              borderRadius: 12,
+              border: "1px solid rgba(255,255,255,0.05)",
             }}
           >
-            <span>KeliLelibot · XAU/USD</span>
-            <span>Ora lokale: {getZoneName(selectedZone)}</span>
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+                minWidth: 760,
+              }}
+            >
+              <thead>
+                <tr>
+                  <th style={thStyle}>{t("direction")}</th>
+                  <th style={thStyle}>{t("entry")}</th>
+                  <th style={thStyle}>{t("entryTime")}</th>
+                  <th style={thStyle}>{t("exit")}</th>
+                  <th style={thStyle}>{t("exitTime")}</th>
+                  <th style={thStyle}>{t("result")}</th>
+                  <th style={thStyle}>{t("return")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {tradeList.length === 0 ? (
+                  <tr>
+                    <td
+                      colSpan={7}
+                      style={{
+                        ...tdStyle,
+                        textAlign: "center",
+                        padding: "32px 12px",
+                        color: C.muted,
+                      }}
+                    >
+                      {backtestLoading ? t("loading") : t("noTrades")}
+                    </td>
+                  </tr>
+                ) : (
+                  tradeList.map((trade, index) => {
+                    const side = tradeSide(trade);
+                    const isLong =
+                      side.includes("BUY") || side.includes("LONG");
+                    const isShort =
+                      side.includes("SELL") || side.includes("SHORT");
+                    const result = tradeResult(trade);
+                    const ret = tradeReturn(trade);
+                    const resultColor =
+                      result === t("win")
+                        ? C.green
+                        : result === t("loss")
+                          ? C.red
+                          : C.gold2;
+
+                    return (
+                      <tr key={`${String(tradeEntryTime(trade) ?? index)}-${index}`}>
+                        <td style={tdStyle}>
+                          <span
+                            style={{
+                              color: isLong ? C.green : isShort ? C.red : C.gold2,
+                              fontWeight: 800,
+                            }}
+                          >
+                            {isLong
+                              ? t("buy")
+                              : isShort
+                                ? t("sell")
+                                : side}
+                          </span>
+                        </td>
+                        <td style={{ ...tdStyle, fontVariantNumeric: "tabular-nums" }}>
+                          {money(tradeEntry(trade))}
+                        </td>
+                        <td style={{ ...tdStyle, color: C.muted }}>
+                          {dateInZone(tradeEntryTime(trade), selectedZone)}
+                        </td>
+                        <td style={{ ...tdStyle, fontVariantNumeric: "tabular-nums" }}>
+                          {money(tradeExit(trade))}
+                        </td>
+                        <td style={{ ...tdStyle, color: C.muted }}>
+                          {dateInZone(tradeExitTime(trade), selectedZone)}
+                        </td>
+                        <td style={{ ...tdStyle, color: resultColor, fontWeight: 800 }}>
+                          {result}
+                        </td>
+                        <td
+                          style={{
+                            ...tdStyle,
+                            color: ret !== null && ret < 0 ? C.red : C.green,
+                            fontWeight: 800,
+                          }}
+                        >
+                          {percent(ret)}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div
+            style={{
+              marginTop: 15,
+              color: C.muted,
+              fontSize: 10,
+              lineHeight: 1.6,
+            }}
+          >
+            {t("activeZone")}: {currentZone?.flag}{" "}
+            {currentZone?.name ?? selectedZone}
           </div>
         </section>
 
         <footer
           style={{
             textAlign: "center",
-            paddingTop: 25,
-            color: "#565656",
+            marginTop: 28,
+            padding: "18px 0 4px",
+            color: "#66676d",
             fontSize: 10,
-            letterSpacing: 1.2,
+            letterSpacing: 2,
           }}
         >
-          <span style={{ color: colors.gold }}>KL</span>
-          {"  "}KELILELIBOT · GOLD TRADING SYSTEM
+          <span style={{ color: C.gold }}>KL</span> KELILELIBOT · GOLD TRADING
+          SYSTEM
+          <div style={{ marginTop: 7, letterSpacing: 0.2 }}>
+            {selectedLanguage?.flag} {selectedLanguage?.name}
+          </div>
         </footer>
       </div>
+
+      <style jsx global>{`
+        * {
+          box-sizing: border-box;
+        }
+
+        html {
+          background: ${C.bg};
+        }
+
+        body {
+          margin: 0;
+          background: ${C.bg};
+        }
+
+        button,
+        select {
+          font: inherit;
+        }
+
+        button {
+          -webkit-tap-highlight-color: transparent;
+        }
+
+        button:focus-visible,
+        select:focus-visible {
+          outline: 2px solid ${C.gold};
+          outline-offset: 3px;
+        }
+
+        button:disabled {
+          cursor: not-allowed;
+        }
+
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-4px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        ::selection {
+          background: rgba(212, 175, 55, 0.28);
+          color: #fff;
+        }
+      `}</style>
     </main>
   );
 }
