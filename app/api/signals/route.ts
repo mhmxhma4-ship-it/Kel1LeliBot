@@ -5,12 +5,37 @@ import { analyzeCandles, parseCandles } from "@/lib/strategy";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+type CandleData = {
+  datetime: string;
+  close: number;
+};
+
+function calculateLatestEMA(
+  values: number[],
+  period: number
+): number | null {
+  if (values.length < period) return null;
+
+  // Fillimi llogaritet me mesataren e thjeshte te periudhes.
+  let ema =
+    values.slice(0, period).reduce((sum, value) => sum + value, 0) /
+    period;
+
+  const multiplier = 2 / (period + 1);
+
+  for (let i = period; i < values.length; i++) {
+    ema = values[i] * multiplier + ema * (1 - multiplier);
+  }
+
+  return Number.isFinite(ema) ? ema : null;
+}
+
 export async function GET() {
   const apiKey = process.env.TWELVE_DATA_API_KEY;
 
   if (!apiKey) {
     return NextResponse.json(
-      { error: "Mungon TWELVE_DATA_API_KEY" },
+      { error: "Mungon TWELVE_DATA_API_KEY ne variablat e mjedisit." },
       { status: 503 }
     );
   }
@@ -28,61 +53,84 @@ export async function GET() {
 
     const data = await response.json();
 
-    if (!response.ok || data.status === "error") {
+    if (
+      !response.ok ||
+      data.status === "error" ||
+      data.code ||
+      !Array.isArray(data.values)
+    ) {
       return NextResponse.json(
-        { error: data.message || "Gabim nga Twelve Data" },
+        {
+          error:
+            data.message ||
+            "Nuk u moren te dhenat nga Twelve Data. Kontrollo API key dhe limitin e kerkesave.",
+        },
         { status: 502 }
       );
     }
 
     const candles = parseCandles(data.values);
 
-    if (candles.length < 250) {
+    if (candles.length < 220) {
       return NextResponse.json(
-        { error: "Nuk ka mjaft qirinj per EMA 200" },
-        { status: 502 }
+        {
+          error: `U moren vetem ${candles.length} qirinj. Nevojiten te pakten 220 per EMA 200.`,
+          candlesReceived: candles.length,
+        },
+        { status: 422 }
       );
     }
 
-    const analysis = analyzeCandles(candles);
-    const i = candles.length - 1;
+    const orderedCandles = [...candles].sort(
+      (a, b) =>
+        new Date(a.datetime).getTime() -
+        new Date(b.datetime).getTime()
+    );
 
-    const signal = analysis.signalAt(i);
-    let reason = "Treguesit nuk japin nje sinjal te qarte.";
+    const closes = orderedCandles
+      .map((candle) => Number(candle.close))
+      .filter((value) => Number.isFinite(value) && value > 0);
 
-    if (signal === "BUY") {
-      reason =
-        "Cmimi mbi EMA 200, EMA 9 mbi EMA 21 dhe RSI pozitiv.";
-    } else if (signal === "SELL") {
-      reason =
-        "Cmimi nen EMA 200, EMA 9 nen EMA 21 dhe RSI negativ.";
-    } else if (analysis.prices[i] > analysis.ema200[i]) {
-      reason =
-        "Cmimi eshte mbi EMA 200, por kushtet e tjera per BUY nuk jane plotesuar.";
-    } else if (analysis.prices[i] < analysis.ema200[i]) {
-      reason =
-        "Cmimi eshte nen EMA 200, por kushtet e tjera per SELL nuk jane plotesuar.";
+    if (closes.length < 220) {
+      return NextResponse.json(
+        {
+          error: "Nuk ka mjaft cmime te vlefshme per llogaritjen e EMA-ve.",
+          candlesReceived: closes.length,
+        },
+        { status: 422 }
+      );
     }
+
+    const ema9 = calculateLatestEMA(closes, 9);
+    const ema21 = calculateLatestEMA(closes, 21);
+    const ema200 = calculateLatestEMA(closes, 200);
+
+    if (ema9 === null || ema21 === null || ema200 === null) {
+      return NextResponse.json(
+        { error: "Llogaritja e EMA-ve deshtoi." },
+        { status: 422 }
+      );
+    }
+
+    const result = analyzeCandles(orderedCandles);
 
     return NextResponse.json(
       {
         symbol: "XAU/USD",
-        price: analysis.prices[i].toFixed(2),
-        status: "Analiza teknike u krye",
-        signal,
-        reason,
-        indicators: {
-          ema9: Number(analysis.ema9[i].toFixed(3)),
-          ema21: Number(analysis.ema21[i].toFixed(3)),
-          ema200: Number(analysis.ema200[i].toFixed(3)),
-          rsi14: Number(analysis.rsi[i].toFixed(2)),
-        },
-        candleTime: candles[i].datetime,
-        strategy: "EMA 9/21/200 + RSI 14",
+        ...result,
+
+        // Kthehen si numra ne nivelin kryesor te JSON-it.
+        ema9,
+        ema21,
+        ema200,
+
+        candlesReceived: closes.length,
+        interval: "5min",
+        updatedAt: new Date().toISOString(),
       },
       {
         headers: {
-          "Cache-Control": "no-store, no-cache, must-revalidate",
+          "Cache-Control": "no-store, max-age=0",
         },
       }
     );
@@ -92,9 +140,9 @@ export async function GET() {
         error:
           error instanceof Error
             ? error.message
-            : "Gabim gjate analizes se tregut",
+            : "Gabim gjate llogaritjes se EMA-ve.",
       },
-      { status: 502 }
+      { status: 500 }
     );
   }
 }
