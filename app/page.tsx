@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
@@ -67,6 +66,7 @@ const timeZones = [
   { name: "Dubai", city: "Dubai", zone: "Asia/Dubai", flag: "🇦🇪" },
   { name: "Frankfurt", city: "Frankfurt", zone: "Europe/Berlin", flag: "🇩🇪" },
   { name: "Sydney", city: "Sydney", zone: "Australia/Sydney", flag: "🇦🇺" },
+  { name: "UTC", city: "Koha universale", zone: "UTC", flag: "🌐" },
 ];
 
 function displayValue(value: unknown, suffix = "") {
@@ -75,7 +75,7 @@ function displayValue(value: unknown, suffix = "") {
   }
 
   if (typeof value === "number") {
-    return `${value.toFixed(2)}${suffix}`;
+    return Number.isFinite(value) ? `${value.toFixed(2)}${suffix}` : "--";
   }
 
   if (typeof value === "string") {
@@ -85,10 +85,7 @@ function displayValue(value: unknown, suffix = "") {
   return String(value);
 }
 
-function findValue(
-  data: Record<string, unknown>,
-  keys: string[]
-) {
+function findValue(data: Record<string, unknown>, keys: string[]) {
   for (const key of keys) {
     if (data[key] !== undefined && data[key] !== null) {
       return data[key];
@@ -98,18 +95,63 @@ function findValue(
   return undefined;
 }
 
-function displayTime(value: unknown) {
-  if (typeof value !== "string" || !value) return "--";
+/**
+ * Konverton nje timestamp ne zonen kohore te zgjedhur.
+ * Nese timestamp-i nuk ka Z ose offset, ai interpretohet si kohe lokale
+ * e pajisjes, sepse burimi nuk ka dhene informacion te qarte per zonen.
+ */
+function parseDateTime(value: unknown): Date | null {
+  if (typeof value !== "string" || !value.trim()) return null;
 
-  const match = value.match(
-    /(?:T|\s)(\d{2}:\d{2})(?::(\d{2}))?/
-  );
+  const input = value.trim();
+  const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(input);
 
-  if (match) {
-    return `${match[1]}:${match[2] ?? "00"}`;
+  let date: Date;
+
+  if (hasTimezone) {
+    date = new Date(input);
+  } else {
+    date = new Date(input.replace(" ", "T"));
   }
 
-  return value;
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function formatTimeInZone(value: unknown, zone: string) {
+  const date = parseDateTime(value);
+  if (!date) return "--";
+
+  try {
+    return new Intl.DateTimeFormat("en-GB", {
+      timeZone: zone,
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+    }).format(date);
+  } catch {
+    return "--";
+  }
+}
+
+function formatDateTimeInZone(value: unknown, zone: string) {
+  const date = parseDateTime(value);
+  if (!date) return "--";
+
+  try {
+    return new Intl.DateTimeFormat("en-GB", {
+      timeZone: zone,
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+    }).format(date);
+  } catch {
+    return "--";
+  }
 }
 
 function getLocalTime(zone: string, now: Date) {
@@ -139,6 +181,10 @@ function getLocalDate(zone: string, now: Date) {
   }
 }
 
+function getZoneName(zone: string) {
+  return timeZones.find((item) => item.zone === zone)?.name ?? zone;
+}
+
 export default function Home() {
   const [signal, setSignal] = useState<Signal | null>(null);
   const [backtest, setBacktest] = useState<Backtest | null>(null);
@@ -153,8 +199,13 @@ export default function Home() {
   const [lastBacktestUpdate, setLastBacktestUpdate] = useState("");
   const [now, setNow] = useState<Date | null>(null);
 
+  // Zona kryesore kohore e faqes. Parazgjedhja eshte Greqia.
+  const [selectedZone, setSelectedZone] = useState("Europe/Athens");
+
   const [selectedZones, setSelectedZones] = useState<string[]>(
-    timeZones.map((item) => item.zone)
+    timeZones
+      .filter((item) => item.zone !== "UTC")
+      .map((item) => item.zone)
   );
 
   const [showAllZones, setShowAllZones] = useState(true);
@@ -173,7 +224,7 @@ export default function Home() {
 
       setSignal(data);
       setSignalError("");
-      setLastSignalUpdate(new Date().toLocaleTimeString());
+      setLastSignalUpdate(new Date().toISOString());
     } catch (error) {
       setSignalError(
         error instanceof Error
@@ -199,7 +250,7 @@ export default function Home() {
 
       setBacktest(data);
       setBacktestError("");
-      setLastBacktestUpdate(new Date().toLocaleTimeString());
+      setLastBacktestUpdate(new Date().toISOString());
     } catch (error) {
       setBacktestError(
         error instanceof Error
@@ -228,7 +279,6 @@ export default function Home() {
 
     const safeSignal = async () => {
       if (!active || signalBusy) return;
-
       signalBusy = true;
 
       try {
@@ -240,7 +290,6 @@ export default function Home() {
 
     const safeBacktest = async () => {
       if (!active || backtestBusy) return;
-
       backtestBusy = true;
 
       try {
@@ -269,18 +318,13 @@ export default function Home() {
   }, [refreshSignal, refreshBacktest]);
 
   const signalName = String(
-    findValue(signal ?? {}, [
-      "signal",
-      "action",
-      "recommendation",
-    ]) ?? "WAIT"
+    findValue(signal ?? {}, ["signal", "action", "recommendation"]) ?? "WAIT"
   ).toUpperCase();
 
   const signalColor =
     signalName.includes("BUY") || signalName.includes("LONG")
       ? "#22c55e"
-      : signalName.includes("SELL") ||
-          signalName.includes("SHORT")
+      : signalName.includes("SELL") || signalName.includes("SHORT")
         ? "#ef4444"
         : "#facc15";
 
@@ -352,6 +396,13 @@ export default function Home() {
     selectedZones.includes(item.zone)
   );
 
+  const signalTimestamp = findValue(signal ?? {}, [
+    "timestamp",
+    "time",
+    "datetime",
+    "updatedAt",
+  ]);
+
   return (
     <main
       style={{
@@ -394,23 +445,110 @@ export default function Home() {
             </p>
           </div>
 
-          <div
-            style={{
-              ...panelStyle,
-              padding: "12px 16px",
-              fontSize: 13,
-            }}
-          >
-            <div style={{ color: "#22c55e" }}>
-              ● Sistemi aktiv ne faqe
-            </div>
-
+          <div style={{ ...panelStyle, padding: "12px 16px", fontSize: 13 }}>
+            <div style={{ color: "#22c55e" }}>● Sistemi aktiv ne faqe</div>
             <div style={{ color: "#94a3b8", marginTop: 6 }}>
               Rifreskim sinjali: cdo 60 sekonda
             </div>
           </div>
         </header>
 
+        {/* Zgjedhja e zones kohore per oret kryesore te faqes */}
+        <section style={{ ...panelStyle, marginBottom: 24 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: 14,
+            }}
+          >
+            <div>
+              <h2 style={{ fontSize: 20, margin: 0 }}>
+                Zona kohore e faqes
+              </h2>
+              <p style={{ color: "#94a3b8", fontSize: 13, marginBottom: 0 }}>
+                Ndrysho zonen per te pare oraret kryesore ne kohen lokale te
+                qytetit te zgjedhur.
+              </p>
+            </div>
+
+            <select
+              value={selectedZone}
+              onChange={(event) => setSelectedZone(event.target.value)}
+              aria-label="Zgjidh zonen kohore te faqes"
+              style={{
+                background: "#0b1220",
+                color: "#f8fafc",
+                border: "1px solid #fbbf24",
+                borderRadius: 10,
+                padding: "12px 14px",
+                minWidth: 190,
+                fontSize: 14,
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              {timeZones.map((place) => (
+                <option key={place.zone} value={place.zone}>
+                  {place.flag} {place.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              flexWrap: "wrap",
+              gap: 12,
+              marginTop: 18,
+              padding: 14,
+              background: "#0b1220",
+              border: "1px solid #273449",
+              borderRadius: 12,
+            }}
+          >
+            <div>
+              <div style={labelStyle}>Ora aktuale e zones se zgjedhur</div>
+              <div
+                style={{
+                  fontSize: 27,
+                  fontWeight: 800,
+                  color: "#fbbf24",
+                  marginTop: 5,
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                {now ? getLocalTime(selectedZone, now) : "--:--:--"}
+              </div>
+              <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 4 }}>
+                {now ? getLocalDate(selectedZone, now) : "--"}
+              </div>
+            </div>
+
+            <div style={{ color: "#cbd5e1", fontSize: 13 }}>
+              Zona aktive: <strong>{getZoneName(selectedZone)}</strong>
+            </div>
+          </div>
+
+          <p
+            style={{
+              color: "#64748b",
+              fontSize: 12,
+              marginBottom: 0,
+              marginTop: 12,
+            }}
+          >
+            Kjo zgjedhje ndryshon shfaqjen e orareve ne dashboard, jo kohen
+            reale te tregut ose te dhenat origjinale te API-se.
+          </p>
+        </section>
+
+        {/* Oret boterore */}
         <section style={{ ...panelStyle, marginBottom: 24 }}>
           <div
             style={{
@@ -423,9 +561,7 @@ export default function Home() {
             }}
           >
             <div>
-              <h2 style={{ fontSize: 22, margin: 0 }}>
-                Oraret boterore
-              </h2>
+              <h2 style={{ fontSize: 22, margin: 0 }}>Oraret boterore</h2>
               <p style={{ color: "#94a3b8", fontSize: 13, marginBottom: 0 }}>
                 Ora lokale ne secilin vend, ne kohe reale
               </p>
@@ -488,8 +624,7 @@ export default function Home() {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns:
-                  "repeat(auto-fit, minmax(210px, 1fr))",
+                gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
                 gap: 12,
               }}
             >
@@ -498,7 +633,10 @@ export default function Home() {
                   key={place.zone}
                   style={{
                     background: "#0b1220",
-                    border: "1px solid #273449",
+                    border:
+                      selectedZone === place.zone
+                        ? "1px solid #fbbf24"
+                        : "1px solid #273449",
                     borderRadius: 13,
                     padding: 16,
                   }}
@@ -531,15 +669,26 @@ export default function Home() {
                     {now ? getLocalTime(place.zone, now) : "--:--:--"}
                   </div>
 
-                  <div
-                    style={{
-                      color: "#94a3b8",
-                      fontSize: 12,
-                      marginTop: 5,
-                    }}
-                  >
+                  <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 5 }}>
                     {now ? getLocalDate(place.zone, now) : "--"}
                   </div>
+
+                  <button
+                    onClick={() => setSelectedZone(place.zone)}
+                    style={{
+                      ...buttonStyle,
+                      marginTop: 12,
+                      padding: "7px 10px",
+                      fontSize: 12,
+                      background:
+                        selectedZone === place.zone ? "#22c55e" : "#1e293b",
+                      color: "#f8fafc",
+                    }}
+                  >
+                    {selectedZone === place.zone
+                      ? "Zona aktive"
+                      : "Perdor kete zone"}
+                  </button>
                 </div>
               ))}
             </div>
@@ -558,6 +707,7 @@ export default function Home() {
           </p>
         </section>
 
+        {/* Sinjali */}
         <section
           style={{
             ...panelStyle,
@@ -575,15 +725,11 @@ export default function Home() {
               marginTop: 10,
             }}
           >
-            {signalLoading && !signal
-              ? "Duke ngarkuar..."
-              : signalName}
+            {signalLoading && !signal ? "Duke ngarkuar..." : signalName}
           </div>
 
           {signalError && (
-            <p style={{ color: "#f87171" }}>
-              Gabim sinjali: {signalError}
-            </p>
+            <p style={{ color: "#f87171" }}>Gabim sinjali: {signalError}</p>
           )}
 
           {signal?.reason && (
@@ -593,8 +739,7 @@ export default function Home() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns:
-                "repeat(auto-fit, minmax(130px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
               gap: 16,
               marginTop: 22,
             }}
@@ -611,38 +756,37 @@ export default function Home() {
             ].map((item) => (
               <div key={item.label}>
                 <div style={labelStyle}>{item.label}</div>
-                <div
-                  style={{
-                    fontSize: 18,
-                    fontWeight: 700,
-                    marginTop: 7,
-                  }}
-                >
+                <div style={{ fontSize: 18, fontWeight: 700, marginTop: 7 }}>
                   {displayValue(item.value)}
                 </div>
               </div>
             ))}
           </div>
 
-          <div
-            style={{
-              color: "#64748b",
-              fontSize: 12,
-              marginTop: 18,
-            }}
-          >
-            Perditesuar: {lastSignalUpdate || "--"}
+          <div style={{ color: "#64748b", fontSize: 12, marginTop: 18 }}>
+            Koha e sinjalit:{" "}
+            {signalTimestamp
+              ? formatDateTimeInZone(signalTimestamp, selectedZone)
+              : "--"}
+          </div>
+
+          <div style={{ color: "#64748b", fontSize: 12, marginTop: 5 }}>
+            Perditesuar:{" "}
+            {lastSignalUpdate
+              ? formatDateTimeInZone(lastSignalUpdate, selectedZone)
+              : "--"}
           </div>
 
           <button
             onClick={() => void refreshSignal()}
             disabled={signalLoading}
-            style={buttonStyle}
+            style={{ ...buttonStyle, marginTop: 12 }}
           >
             {signalLoading ? "Duke ngarkuar..." : "Rifresko sinjalin"}
           </button>
         </section>
 
+        {/* Backtest */}
         <section style={{ marginBottom: 24 }}>
           <div
             style={{
@@ -654,9 +798,7 @@ export default function Home() {
               marginBottom: 14,
             }}
           >
-            <h2 style={{ fontSize: 22, margin: 0 }}>
-              Backtest automatik
-            </h2>
+            <h2 style={{ fontSize: 22, margin: 0 }}>Backtest automatik</h2>
 
             <button
               onClick={() => void refreshBacktest()}
@@ -682,30 +824,17 @@ export default function Home() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns:
-                "repeat(auto-fit, minmax(145px, 1fr))",
+              gridTemplateColumns: "repeat(auto-fit, minmax(145px, 1fr))",
               gap: 12,
             }}
           >
             {[
               { label: "Tregtime", value: displayValue(tradeCount) },
               { label: "Win rate", value: displayValue(winRate, "%") },
-              {
-                label: "Profit factor",
-                value: displayValue(profitFactor),
-              },
-              {
-                label: "Kthimi neto",
-                value: displayValue(netReturn, "%"),
-              },
-              {
-                label: "Max drawdown",
-                value: displayValue(maxDrawdown, "%"),
-              },
-              {
-                label: "Kapitali final",
-                value: displayValue(finalCapital),
-              },
+              { label: "Profit factor", value: displayValue(profitFactor) },
+              { label: "Kthimi neto", value: displayValue(netReturn, "%") },
+              { label: "Max drawdown", value: displayValue(maxDrawdown, "%") },
+              { label: "Kapitali final", value: displayValue(finalCapital) },
             ].map((item) => (
               <div key={item.label} style={panelStyle}>
                 <div style={labelStyle}>{item.label}</div>
@@ -717,32 +846,26 @@ export default function Home() {
           <div style={{ ...panelStyle, marginTop: 14 }}>
             <div style={labelStyle}>Kapitali fillestar</div>
 
-            <div
-              style={{
-                fontSize: 20,
-                fontWeight: 700,
-                marginTop: 7,
-              }}
-            >
+            <div style={{ fontSize: 20, fontWeight: 700, marginTop: 7 }}>
               {displayValue(startingCapital)}
             </div>
 
-            <div
-              style={{
-                color: "#64748b",
-                fontSize: 12,
-                marginTop: 12,
-              }}
-            >
-              Backtest-i i fundit: {lastBacktestUpdate || "--"}
+            <div style={{ color: "#64748b", fontSize: 12, marginTop: 12 }}>
+              Backtest-i i fundit:{" "}
+              {lastBacktestUpdate
+                ? formatDateTimeInZone(lastBacktestUpdate, selectedZone)
+                : "--"}
             </div>
           </div>
         </section>
 
+        {/* Tregtimet e fundit */}
         <section style={panelStyle}>
-          <h2 style={{ fontSize: 21, marginTop: 0 }}>
-            Tregtimet e fundit
-          </h2>
+          <h2 style={{ fontSize: 21, marginTop: 0 }}>Tregtimet e fundit</h2>
+
+          <p style={{ color: "#94a3b8", fontSize: 12 }}>
+            Oret shfaqen sipas zones aktive: {getZoneName(selectedZone)}.
+          </p>
 
           {trades.length === 0 ? (
             <p style={{ color: "#94a3b8" }}>
@@ -787,9 +910,7 @@ export default function Home() {
 
                 <tbody>
                   {trades.map((trade, index) => {
-                    const rawResult = String(
-                      trade.result ?? ""
-                    ).toUpperCase();
+                    const rawResult = String(trade.result ?? "").toUpperCase();
 
                     const numericResult = findValue(trade, [
                       "netReturnPct",
@@ -822,8 +943,7 @@ export default function Home() {
                         resultNumber < 0);
 
                     const resultLabel =
-                      rawResult === "BREAKEVEN" ||
-                      rawResult === "BREAK_EVEN"
+                      rawResult === "BREAKEVEN" || rawResult === "BREAK_EVEN"
                         ? "BREAKEVEN"
                         : isWin
                           ? "WIN"
@@ -847,10 +967,7 @@ export default function Home() {
                     return (
                       <tr
                         key={`${index}-${String(
-                          trade.entryTime ??
-                            trade.entryPrice ??
-                            trade.entry ??
-                            ""
+                          trade.entryTime ?? trade.entryPrice ?? trade.entry ?? ""
                         )}`}
                       >
                         <td style={cellStyle}>
@@ -858,23 +975,19 @@ export default function Home() {
                         </td>
 
                         <td style={cellStyle}>
-                          {displayValue(
-                            trade.entryPrice ?? trade.entry
-                          )}
+                          {displayValue(trade.entryPrice ?? trade.entry)}
                         </td>
 
                         <td style={cellStyle}>
-                          {displayTime(trade.entryTime)}
+                          {formatDateTimeInZone(trade.entryTime, selectedZone)}
                         </td>
 
                         <td style={cellStyle}>
-                          {displayValue(
-                            trade.exitPrice ?? trade.exit
-                          )}
+                          {displayValue(trade.exitPrice ?? trade.exit)}
                         </td>
 
                         <td style={cellStyle}>
-                          {displayTime(trade.exitTime)}
+                          {formatDateTimeInZone(trade.exitTime, selectedZone)}
                         </td>
 
                         <td
@@ -891,8 +1004,7 @@ export default function Home() {
                           style={{
                             ...cellStyle,
                             color:
-                              typeof resultNumber === "number" &&
-                              resultNumber > 0
+                              typeof resultNumber === "number" && resultNumber > 0
                                 ? "#22c55e"
                                 : typeof resultNumber === "number" &&
                                     resultNumber < 0
