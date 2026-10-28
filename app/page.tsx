@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
@@ -58,29 +59,25 @@ type Backtest = {
 };
 
 const timeZones = [
-  { name: "Greqi", city: "Athine", zone: "Europe/Athens", flag: "🇬🇷" },
-  { name: "Shqiperi", city: "Tirane", zone: "Europe/Tirane", flag: "🇦🇱" },
-  { name: "Londer", city: "Londer", zone: "Europe/London", flag: "🇬🇧" },
-  { name: "New York", city: "New York", zone: "America/New_York", flag: "🇺🇸" },
-  { name: "Tokyo", city: "Tokyo", zone: "Asia/Tokyo", flag: "🇯🇵" },
-  { name: "Dubai", city: "Dubai", zone: "Asia/Dubai", flag: "🇦🇪" },
-  { name: "Frankfurt", city: "Frankfurt", zone: "Europe/Berlin", flag: "🇩🇪" },
-  { name: "Sydney", city: "Sydney", zone: "Australia/Sydney", flag: "🇦🇺" },
-  { name: "UTC", city: "Koha universale", zone: "UTC", flag: "🌐" },
+  { name: "Greqi", zone: "Europe/Athens", flag: "🇬🇷" },
+  { name: "Shqiperi", zone: "Europe/Tirane", flag: "🇦🇱" },
+  { name: "Londer", zone: "Europe/London", flag: "🇬🇧" },
+  { name: "New York", zone: "America/New_York", flag: "🇺🇸" },
+  { name: "Tokyo", zone: "Asia/Tokyo", flag: "🇯🇵" },
+  { name: "Dubai", zone: "Asia/Dubai", flag: "🇦🇪" },
+  { name: "Frankfurt", zone: "Europe/Berlin", flag: "🇩🇪" },
+  { name: "Sydney", zone: "Australia/Sydney", flag: "🇦🇺" },
+  { name: "UTC", zone: "UTC", flag: "🌐" },
 ];
 
 function displayValue(value: unknown, suffix = "") {
-  if (value === undefined || value === null || value === "") {
-    return "--";
-  }
+  if (value === undefined || value === null || value === "") return "--";
 
   if (typeof value === "number") {
     return Number.isFinite(value) ? `${value.toFixed(2)}${suffix}` : "--";
   }
 
-  if (typeof value === "string") {
-    return `${value}${suffix}`;
-  }
+  if (typeof value === "string") return `${value}${suffix}`;
 
   return String(value);
 }
@@ -95,43 +92,16 @@ function findValue(data: Record<string, unknown>, keys: string[]) {
   return undefined;
 }
 
-/**
- * Konverton nje timestamp ne zonen kohore te zgjedhur.
- * Nese timestamp-i nuk ka Z ose offset, ai interpretohet si kohe lokale
- * e pajisjes, sepse burimi nuk ka dhene informacion te qarte per zonen.
- */
 function parseDateTime(value: unknown): Date | null {
   if (typeof value !== "string" || !value.trim()) return null;
 
   const input = value.trim();
   const hasTimezone = /(?:Z|[+-]\d{2}:?\d{2})$/i.test(input);
-
-  let date: Date;
-
-  if (hasTimezone) {
-    date = new Date(input);
-  } else {
-    date = new Date(input.replace(" ", "T"));
-  }
+  const date = hasTimezone
+    ? new Date(input)
+    : new Date(input.replace(" ", "T"));
 
   return Number.isNaN(date.getTime()) ? null : date;
-}
-
-function formatTimeInZone(value: unknown, zone: string) {
-  const date = parseDateTime(value);
-  if (!date) return "--";
-
-  try {
-    return new Intl.DateTimeFormat("en-GB", {
-      timeZone: zone,
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hourCycle: "h23",
-    }).format(date);
-  } catch {
-    return "--";
-  }
 }
 
 function formatDateTimeInZone(value: unknown, zone: string) {
@@ -199,16 +169,8 @@ export default function Home() {
   const [lastBacktestUpdate, setLastBacktestUpdate] = useState("");
   const [now, setNow] = useState<Date | null>(null);
 
-  // Zona kryesore kohore e faqes. Parazgjedhja eshte Greqia.
   const [selectedZone, setSelectedZone] = useState("Europe/Athens");
-
-  const [selectedZones, setSelectedZones] = useState<string[]>(
-    timeZones
-      .filter((item) => item.zone !== "UTC")
-      .map((item) => item.zone)
-  );
-
-  const [showAllZones, setShowAllZones] = useState(true);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const refreshSignal = useCallback(async () => {
     try {
@@ -265,11 +227,11 @@ export default function Home() {
   useEffect(() => {
     setNow(new Date());
 
-    const clockTimer = window.setInterval(() => {
+    const timer = window.setInterval(() => {
       setNow(new Date());
     }, 1000);
 
-    return () => window.clearInterval(clockTimer);
+    return () => window.clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -373,6 +335,13 @@ export default function Home() {
     ? backtest.trades.slice(-20).reverse()
     : [];
 
+  const signalTimestamp = findValue(signal ?? {}, [
+    "timestamp",
+    "time",
+    "datetime",
+    "updatedAt",
+  ]);
+
   const panelStyle = {
     background: "#111827",
     border: "1px solid #273449",
@@ -392,16 +361,8 @@ export default function Home() {
     overflowWrap: "anywhere" as const,
   };
 
-  const visibleZones = timeZones.filter((item) =>
-    selectedZones.includes(item.zone)
-  );
-
-  const signalTimestamp = findValue(signal ?? {}, [
-    "timestamp",
-    "time",
-    "datetime",
-    "updatedAt",
-  ]);
+  const activePlace =
+    timeZones.find((place) => place.zone === selectedZone) ?? timeZones[0];
 
   return (
     <main
@@ -419,9 +380,9 @@ export default function Home() {
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            flexWrap: "wrap",
-            gap: 12,
+            gap: 14,
             marginBottom: 26,
+            position: "relative",
           }}
         >
           <div>
@@ -445,200 +406,82 @@ export default function Home() {
             </p>
           </div>
 
-          <div style={{ ...panelStyle, padding: "12px 16px", fontSize: 13 }}>
-            <div style={{ color: "#22c55e" }}>● Sistemi aktiv ne faqe</div>
-            <div style={{ color: "#94a3b8", marginTop: 6 }}>
-              Rifreskim sinjali: cdo 60 sekonda
-            </div>
-          </div>
-        </header>
-
-        {/* Zgjedhja e zones kohore per oret kryesore te faqes */}
-        <section style={{ ...panelStyle, marginBottom: 24 }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: 14,
-            }}
-          >
-            <div>
-              <h2 style={{ fontSize: 20, margin: 0 }}>
-                Zona kohore e faqes
-              </h2>
-              <p style={{ color: "#94a3b8", fontSize: 13, marginBottom: 0 }}>
-                Ndrysho zonen per te pare oraret kryesore ne kohen lokale te
-                qytetit te zgjedhur.
-              </p>
-            </div>
-
-            <select
-              value={selectedZone}
-              onChange={(event) => setSelectedZone(event.target.value)}
-              aria-label="Zgjidh zonen kohore te faqes"
-              style={{
-                background: "#0b1220",
-                color: "#f8fafc",
-                border: "1px solid #fbbf24",
-                borderRadius: 10,
-                padding: "12px 14px",
-                minWidth: 190,
-                fontSize: 14,
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              {timeZones.map((place) => (
-                <option key={place.zone} value={place.zone}>
-                  {place.flag} {place.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              flexWrap: "wrap",
-              gap: 12,
-              marginTop: 18,
-              padding: 14,
-              background: "#0b1220",
-              border: "1px solid #273449",
-              borderRadius: 12,
-            }}
-          >
-            <div>
-              <div style={labelStyle}>Ora aktuale e zones se zgjedhur</div>
-              <div
-                style={{
-                  fontSize: 27,
-                  fontWeight: 800,
-                  color: "#fbbf24",
-                  marginTop: 5,
-                  fontVariantNumeric: "tabular-nums",
-                }}
-              >
-                {now ? getLocalTime(selectedZone, now) : "--:--:--"}
-              </div>
-              <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 4 }}>
-                {now ? getLocalDate(selectedZone, now) : "--"}
-              </div>
-            </div>
-
-            <div style={{ color: "#cbd5e1", fontSize: 13 }}>
-              Zona aktive: <strong>{getZoneName(selectedZone)}</strong>
-            </div>
-          </div>
-
-          <p
-            style={{
-              color: "#64748b",
-              fontSize: 12,
-              marginBottom: 0,
-              marginTop: 12,
-            }}
-          >
-            Kjo zgjedhje ndryshon shfaqjen e orareve ne dashboard, jo kohen
-            reale te tregut ose te dhenat origjinale te API-se.
-          </p>
-        </section>
-
-        {/* Oret boterore */}
-        <section style={{ ...panelStyle, marginBottom: 24 }}>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: 12,
-              marginBottom: 16,
-            }}
-          >
-            <div>
-              <h2 style={{ fontSize: 22, margin: 0 }}>Oraret boterore</h2>
-              <p style={{ color: "#94a3b8", fontSize: 13, marginBottom: 0 }}>
-                Ora lokale ne secilin vend, ne kohe reale
-              </p>
-            </div>
-
+          {/* Menuja e vetme, ne cepin lart djathtas */}
+          <div style={{ position: "relative", flexShrink: 0 }}>
             <button
-              onClick={() => setShowAllZones((value) => !value)}
-              style={buttonStyle}
-            >
-              {showAllZones ? "Fshih zgjedhjet" : "Zgjidh vendet"}
-            </button>
-          </div>
-
-          {showAllZones && (
-            <div
+              onClick={() => setMenuOpen((open) => !open)}
+              aria-label={menuOpen ? "Mbyll menune" : "Hap menune"}
+              aria-expanded={menuOpen}
               style={{
+                width: 50,
+                height: 50,
                 display: "flex",
-                flexWrap: "wrap",
-                gap: 8,
-                marginBottom: 18,
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 5,
+                background: menuOpen
+                  ? "linear-gradient(135deg, #fbbf24, #f59e0b)"
+                  : "#111827",
+                border: "1px solid #fbbf24",
+                borderRadius: 15,
+                cursor: "pointer",
+                boxShadow: "0 6px 24px #0005",
               }}
             >
-              {timeZones.map((place) => {
-                const checked = selectedZones.includes(place.zone);
+              <span
+                style={{
+                  width: 21,
+                  height: 2,
+                  background: menuOpen ? "#111827" : "#fbbf24",
+                  borderRadius: 2,
+                }}
+              />
+              <span
+                style={{
+                  width: 21,
+                  height: 2,
+                  background: menuOpen ? "#111827" : "#fbbf24",
+                  borderRadius: 2,
+                }}
+              />
+              <span
+                style={{
+                  width: 21,
+                  height: 2,
+                  background: menuOpen ? "#111827" : "#fbbf24",
+                  borderRadius: 2,
+                }}
+              />
+            </button>
 
-                return (
-                  <button
-                    key={place.zone}
-                    onClick={() => {
-                      setSelectedZones((current) =>
-                        checked
-                          ? current.filter((zone) => zone !== place.zone)
-                          : [...current, place.zone]
-                      );
-                    }}
-                    style={{
-                      border: checked
-                        ? "1px solid #fbbf24"
-                        : "1px solid #334155",
-                      background: checked ? "#292315" : "#0b1220",
-                      color: checked ? "#fbbf24" : "#cbd5e1",
-                      borderRadius: 9,
-                      padding: "8px 11px",
-                      cursor: "pointer",
-                      fontSize: 13,
-                    }}
-                  >
-                    {place.flag} {place.name} {checked ? "✓" : "+"}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {visibleZones.length === 0 ? (
-            <p style={{ color: "#94a3b8" }}>
-              Zgjidh te pakten nje vend per te pare oren.
-            </p>
-          ) : (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))",
-                gap: 12,
-              }}
-            >
-              {visibleZones.map((place) => (
-                <div
-                  key={place.zone}
+            {menuOpen && (
+              <>
+                <button
+                  aria-label="Mbyll menune"
+                  onClick={() => setMenuOpen(false)}
                   style={{
-                    background: "#0b1220",
-                    border:
-                      selectedZone === place.zone
-                        ? "1px solid #fbbf24"
-                        : "1px solid #273449",
-                    borderRadius: 13,
-                    padding: 16,
+                    position: "fixed",
+                    inset: 0,
+                    zIndex: 20,
+                    background: "transparent",
+                    border: "none",
+                    cursor: "default",
+                  }}
+                />
+
+                <div
+                  style={{
+                    position: "absolute",
+                    zIndex: 21,
+                    top: 60,
+                    right: 0,
+                    width: "min(310px, calc(100vw - 32px))",
+                    padding: 18,
+                    background: "#111827",
+                    border: "1px solid #374151",
+                    borderRadius: 18,
+                    boxShadow: "0 18px 55px #0009",
                   }}
                 >
                   <div
@@ -646,68 +489,180 @@ export default function Home() {
                       display: "flex",
                       justifyContent: "space-between",
                       alignItems: "center",
-                      gap: 8,
+                      gap: 10,
+                      marginBottom: 16,
                     }}
                   >
-                    <span style={{ fontSize: 15, fontWeight: 700 }}>
-                      {place.flag} {place.name}
-                    </span>
-                    <span style={{ color: "#64748b", fontSize: 11 }}>
-                      {place.city}
-                    </span>
+                    <div>
+                      <div style={{ color: "#fbbf24", fontSize: 11, letterSpacing: 2 }}>
+                        SETTINGS
+                      </div>
+                      <h2 style={{ fontSize: 19, margin: "5px 0 0" }}>
+                        Ora dhe zona
+                      </h2>
+                    </div>
+
+                    <button
+                      onClick={() => setMenuOpen(false)}
+                      aria-label="Mbyll"
+                      style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 9,
+                        border: "1px solid #374151",
+                        background: "#0b1220",
+                        color: "#f8fafc",
+                        fontSize: 20,
+                        cursor: "pointer",
+                      }}
+                    >
+                      ×
+                    </button>
+                  </div>
+
+                  <label
+                    htmlFor="timezone"
+                    style={{
+                      display: "block",
+                      color: "#94a3b8",
+                      fontSize: 12,
+                      marginBottom: 8,
+                    }}
+                  >
+                    Zgjidh zonen kohore
+                  </label>
+
+                  <select
+                    id="timezone"
+                    value={selectedZone}
+                    onChange={(event) => {
+                      setSelectedZone(event.target.value);
+                    }}
+                    style={{
+                      width: "100%",
+                      boxSizing: "border-box",
+                      background: "#0b1220",
+                      color: "#f8fafc",
+                      border: "1px solid #fbbf24",
+                      borderRadius: 11,
+                      padding: "12px 10px",
+                      fontSize: 14,
+                      outline: "none",
+                    }}
+                  >
+                    {timeZones.map((place) => (
+                      <option key={place.zone} value={place.zone}>
+                        {place.flag} {place.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <div
+                    style={{
+                      marginTop: 15,
+                      padding: 15,
+                      background: "#0b1220",
+                      border: "1px solid #273449",
+                      borderRadius: 13,
+                    }}
+                  >
+                    <div style={{ color: "#94a3b8", fontSize: 12 }}>
+                      {activePlace.flag} Ora ne {activePlace.name}
+                    </div>
+
+                    <div
+                      style={{
+                        color: "#fbbf24",
+                        fontSize: 30,
+                        fontWeight: 800,
+                        marginTop: 7,
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
+                      {now ? getLocalTime(selectedZone, now) : "--:--:--"}
+                    </div>
+
+                    <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 5 }}>
+                      {now ? getLocalDate(selectedZone, now) : "--"}
+                    </div>
                   </div>
 
                   <div
                     style={{
-                      fontSize: 29,
-                      fontWeight: 800,
-                      color: "#fbbf24",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      color: "#94a3b8",
+                      fontSize: 12,
                       marginTop: 14,
-                      fontVariantNumeric: "tabular-nums",
                     }}
                   >
-                    {now ? getLocalTime(place.zone, now) : "--:--:--"}
-                  </div>
-
-                  <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 5 }}>
-                    {now ? getLocalDate(place.zone, now) : "--"}
+                    <span style={{ color: "#22c55e" }}>●</span>
+                    Ora perditesohet automatikisht
                   </div>
 
                   <button
-                    onClick={() => setSelectedZone(place.zone)}
+                    onClick={() => setMenuOpen(false)}
                     style={{
-                      ...buttonStyle,
-                      marginTop: 12,
-                      padding: "7px 10px",
-                      fontSize: 12,
-                      background:
-                        selectedZone === place.zone ? "#22c55e" : "#1e293b",
-                      color: "#f8fafc",
+                      width: "100%",
+                      marginTop: 16,
+                      padding: "12px 14px",
+                      border: "none",
+                      borderRadius: 11,
+                      background: "#fbbf24",
+                      color: "#111827",
+                      fontWeight: 800,
+                      cursor: "pointer",
                     }}
                   >
-                    {selectedZone === place.zone
-                      ? "Zona aktive"
-                      : "Perdor kete zone"}
+                    U krye
                   </button>
                 </div>
-              ))}
+              </>
+            )}
+          </div>
+        </header>
+
+        <div
+          style={{
+            ...panelStyle,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 12,
+            marginBottom: 22,
+          }}
+        >
+          <div>
+            <div style={{ color: "#22c55e", fontSize: 13, fontWeight: 700 }}>
+              ● Sistemi aktiv ne faqe
             </div>
-          )}
+            <div style={{ color: "#94a3b8", fontSize: 12, marginTop: 6 }}>
+              Rifreskim sinjali dhe backtest-i cdo 60 sekonda
+            </div>
+          </div>
 
-          <p
-            style={{
-              color: "#64748b",
-              fontSize: 12,
-              marginBottom: 0,
-              marginTop: 16,
-            }}
-          >
-            Oret perditesohen cdo sekonde. Zonat kohore pershtaten
-            automatikisht me oren verore dhe dimerore.
-          </p>
-        </section>
+          <div style={{ textAlign: "right" }}>
+            <div style={{ color: "#94a3b8", fontSize: 12 }}>
+              Zona kohore aktive
+            </div>
+            <div style={{ fontWeight: 700, marginTop: 5 }}>
+              {activePlace.flag} {activePlace.name}
+              <span
+                style={{
+                  color: "#fbbf24",
+                  marginLeft: 10,
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                {now ? getLocalTime(selectedZone, now) : "--:--:--"}
+              </span>
+            </div>
+          </div>
+        </div>
 
-        {/* Sinjali */}
+        {/* Sinjali aktual */}
         <section
           style={{
             ...panelStyle,
@@ -780,7 +735,7 @@ export default function Home() {
           <button
             onClick={() => void refreshSignal()}
             disabled={signalLoading}
-            style={{ ...buttonStyle, marginTop: 12 }}
+            style={buttonStyle}
           >
             {signalLoading ? "Duke ngarkuar..." : "Rifresko sinjalin"}
           </button>
@@ -845,7 +800,6 @@ export default function Home() {
 
           <div style={{ ...panelStyle, marginTop: 14 }}>
             <div style={labelStyle}>Kapitali fillestar</div>
-
             <div style={{ fontSize: 20, fontWeight: 700, marginTop: 7 }}>
               {displayValue(startingCapital)}
             </div>
