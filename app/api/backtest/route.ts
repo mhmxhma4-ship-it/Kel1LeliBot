@@ -11,6 +11,46 @@ export const revalidate = 0;
 
 type Position = 1 | -1 | 0;
 type TradeResult = "WIN" | "LOSS" | "BREAKEVEN";
+type ExitReason =
+  | "SIGNAL"
+  | "STOP_LOSS"
+  | "TAKE_PROFIT"
+  | "END";
+
+type Trade = {
+  side: "BUY" | "SELL";
+  entry: number;
+  exit: number;
+  entryPrice: number;
+  exitPrice: number;
+  entryTime: string;
+  exitTime: string;
+  grossReturnPct: number;
+  netReturnPct: number;
+  netPct: number;
+  netProfit: number;
+  result: TradeResult;
+  stopLoss: number;
+  takeProfit: number;
+  exitReason: ExitReason;
+};
+
+function envNumber(
+  name: string,
+  fallback: number
+): number {
+  const raw = process.env[name];
+
+  if (raw === undefined || raw.trim() === "") {
+    return fallback;
+  }
+
+  return Number(raw);
+}
+
+function round(value: number, decimals = 2): number {
+  return Number(value.toFixed(decimals));
+}
 
 export async function GET() {
   const apiKey = process.env.TWELVE_DATA_API_KEY;
@@ -34,6 +74,7 @@ export async function GET() {
 
     const response = await fetch(url.toString(), {
       cache: "no-store",
+      signal: AbortSignal.timeout(15000),
     });
 
     const data = await response.json();
@@ -66,27 +107,36 @@ export async function GET() {
       );
     }
 
-    const costInput = Number(
-      process.env.XAU_COST_BPS ?? "5"
+    // Kostot jane te modeluara ne basis points per ane.
+    // 1 bps = 0.01% e vleres se pozicionit.
+    const costBpsPerSide = envNumber("XAU_COST_BPS", 5);
+    const slippageBpsPerSide = envNumber(
+      "XAU_SLIPPAGE_BPS",
+      1
     );
 
-    if (!Number.isFinite(costInput) || costInput < 0) {
+    if (
+      !Number.isFinite(costBpsPerSide) ||
+      costBpsPerSide < 0 ||
+      !Number.isFinite(slippageBpsPerSide) ||
+      slippageBpsPerSide < 0
+    ) {
       return NextResponse.json(
         {
           error:
-            "XAU_COST_BPS duhet te jete numer jo negativ.",
+            "XAU_COST_BPS dhe XAU_SLIPPAGE_BPS duhet te jene numra jo negative.",
         },
         { status: 500 }
       );
     }
 
-    // 1 basis point = 0.01%.
-    const costPctPerSide = costInput / 100;
+    const initialCapital = 1000;
+    const riskReward = 2;
+    const stopLossATRMultiplier = 1.5;
 
     const analysis = analyzeCandles(candles);
     const atrSeries = calculateATR(candles, 14);
 
-    const initialCapital = 1000;
     let equity = initialCapital;
     let peakEquity = initialCapital;
     let maxDrawdownPct = 0;
@@ -99,40 +149,74 @@ export async function GET() {
 
     let wins = 0;
     let losses = 0;
-    let grossWins = 0;
-    let grossLosses = 0;
+    let breakeven = 0;
 
-    const trades: {
-      side: "BUY" | "SELL";
-      entry: number;
-      exit: number;
-      entryPrice: number;
-      exitPrice: number;
-      entryTime: string;
-      exitTime: string;
-      netReturnPct: number;
-      netPct: number;
-      result: TradeResult;
-      stopLoss: number;
-      takeProfit: number;
-      exitReason: "SIGNAL" | "STOP_LOSS" | "TAKE_PROFIT" | "END";
-    }[] = [];
+    // Fitimi dhe humbja bruto ne para, para kostove.
+    let grossProfitMoney = 0;
+    let grossLossMoney = 0;
+
+    const trades: Trade[] = [];
+
+    const totalCostBpsPerRoundTrip =
+      2 * (costBpsPerSide + slippageBpsPerSide);
+
+    function updateDrawdown() {
+      peakEquity = Math.max(peakEquity, equity);
+
+      const drawdown =
+        peakEquity > 0
+          ? ((peakEquity - equity) / peakEquity) * 100
+          : 0;
+
+      maxDrawdownPct = Math.max(
+        maxDrawdownPct,
+        drawdown
+      );
+    }
 
     function closePosition(
-      exitPrice: number,
+      rawExitPrice: number,
       exitTime: string,
-      exitReason: "SIGNAL" | "STOP_LOSS" | "TAKE_PROFIT" | "END"
+      exitReason: ExitReason
     ) {
       if (position === 0) return;
 
+      if (
+        !Number.isFinite(rawExitPrice) ||
+        rawExitPrice <= 0 ||
+        entryPrice <= 0
+      ) {
+        throw new Error(
+          "Cmimi i hyrjes ose daljes nuk eshte valid."
+        );
+      }
+
+      // Slippage aplikohet ne drejtimin e pafavorshem.
+      const exitPrice =
+        rawExitPrice *
+        (1 -
+          position *
+            (slippageBpsPerSide / 10000));
+
       const grossPct =
-        (position * (exitPrice - entryPrice) / entryPrice) * 100;
+        (position * (rawExitPrice - entryPrice) /
+          entryPrice) *
+        100;
 
-      // Approximate round-trip trading costs.
-      const netPct = grossPct - 2 * costPctPerSide;
+      // Kosto per hapje dhe mbyllje, si perqindje e cmimit.
+      const tradingCostPct =
+        (totalCostBpsPerRoundTrip / 10000) * 100;
 
+      const netPct = grossPct - tradingCostPct;
       const previousEquity = equity;
-      equity *= 1 + netPct / 100;
+
+      const grossMoney =
+        previousEquity * (grossPct / 100);
+
+      const netMoney =
+        previousEquity * (netPct / 100);
+
+      equity = previousEquity + netMoney;
 
       const result: TradeResult =
         netPct > 0.000001
@@ -143,60 +227,105 @@ export async function GET() {
 
       if (result === "WIN") {
         wins++;
-        grossWins += netPct;
+        grossProfitMoney += netMoney;
       } else if (result === "LOSS") {
         losses++;
-        grossLosses += Math.abs(netPct);
+        grossLossMoney += Math.abs(netMoney);
+      } else {
+        breakeven++;
       }
 
       trades.push({
         side: position === 1 ? "BUY" : "SELL",
-        entry: Number(entryPrice.toFixed(3)),
-        exit: Number(exitPrice.toFixed(3)),
-        entryPrice: Number(entryPrice.toFixed(3)),
-        exitPrice: Number(exitPrice.toFixed(3)),
+        entry: round(entryPrice, 3),
+        exit: round(exitPrice, 3),
+        entryPrice: round(entryPrice, 3),
+        exitPrice: round(exitPrice, 3),
         entryTime,
         exitTime,
-        netReturnPct: Number(netPct.toFixed(4)),
-        netPct: Number(netPct.toFixed(4)),
+        grossReturnPct: round(grossPct, 4),
+        netReturnPct: round(netPct, 4),
+        netPct: round(netPct, 4),
+        netProfit: round(netMoney, 2),
         result,
-        stopLoss: Number(stopLossPrice.toFixed(3)),
-        takeProfit: Number(takeProfitPrice.toFixed(3)),
+        stopLoss: round(stopLossPrice, 3),
+        takeProfit: round(takeProfitPrice, 3),
         exitReason,
       });
 
-      peakEquity = Math.max(peakEquity, equity);
-
-      const drawdown =
-        peakEquity > 0
-          ? ((peakEquity - equity) / peakEquity) * 100
-          : 0;
-
-      maxDrawdownPct = Math.max(maxDrawdownPct, drawdown);
+      updateDrawdown();
 
       if (
         !Number.isFinite(equity) ||
-        !Number.isFinite(previousEquity) ||
-        equity <= 0
+        equity <= 0 ||
+        !Number.isFinite(grossMoney)
       ) {
         throw new Error(
-          "Gabim ne llogaritjen e kapitalit."
+          "Kapitali u be jo valid gjate backtest-it."
         );
       }
 
       position = 0;
+      entryPrice = 0;
+      entryTime = "";
       stopLossPrice = 0;
       takeProfitPrice = 0;
     }
 
-    for (let i = 200; i < candles.length - 1; i++) {
+    function openPosition(
+      side: Position,
+      rawEntryPrice: number,
+      time: string,
+      atr: number
+    ) {
+      if (
+        side === 0 ||
+        !Number.isFinite(rawEntryPrice) ||
+        rawEntryPrice <= 0 ||
+        !Number.isFinite(atr) ||
+        atr <= 0
+      ) {
+        return;
+      }
+
+      // Slippage ne hyrje eshte gjithmone kunder pozicionit.
+      entryPrice =
+        rawEntryPrice *
+        (1 + side * (slippageBpsPerSide / 10000));
+
+      entryTime = time;
+      position = side;
+
+      const stopDistance =
+        atr * stopLossATRMultiplier;
+      const targetDistance =
+        stopDistance * riskReward;
+
+      if (side === 1) {
+        stopLossPrice = entryPrice - stopDistance;
+        takeProfitPrice = entryPrice + targetDistance;
+      } else {
+        stopLossPrice = entryPrice + stopDistance;
+        takeProfitPrice = entryPrice - targetDistance;
+      }
+    }
+
+    for (
+      let i = 200;
+      i < candles.length - 1;
+      i++
+    ) {
       const signal = analysis.signalAt(i);
 
       const desiredPosition: Position =
-        signal === "BUY" ? 1 :
-        signal === "SELL" ? -1 : 0;
+        signal === "BUY"
+          ? 1
+          : signal === "SELL"
+            ? -1
+            : 0;
 
-      // Signal uses candle i, execution occurs at candle i+1 open.
+      // Sinjali nga qiriu i mbyllur i perdorur ketu
+      // ekzekutohet ne hapjen e qiriut pasues.
       const executionCandle = candles[i + 1];
       const executionPrice = executionCandle.open;
       const executionTime = executionCandle.datetime;
@@ -213,29 +342,49 @@ export async function GET() {
         if (desiredPosition !== 0) {
           const atr = atrSeries[i];
 
-          // No entry if a valid ATR is unavailable.
-          if (atr !== null && Number.isFinite(atr) && atr > 0) {
-            position = desiredPosition;
-            entryPrice = executionPrice;
-            entryTime = executionTime;
-
-            const stopDistance = atr * 1.5;
-            const targetDistance = stopDistance * 2;
-
-            if (position === 1) {
-              stopLossPrice = entryPrice - stopDistance;
-              takeProfitPrice = entryPrice + targetDistance;
-            } else {
-              stopLossPrice = entryPrice + stopDistance;
-              takeProfitPrice = entryPrice - targetDistance;
-            }
+          if (atr !== null && atr > 0) {
+            openPosition(
+              desiredPosition,
+              executionPrice,
+              executionTime,
+              atr
+            );
           }
         }
       }
 
       if (position === 0) continue;
 
-      // Test SL/TP against the full OHLC range of this candle.
+      // Nese tregu hapet pertej SL/TP, modelojme
+      // daljen me cmimin e hapjes kur ai eshte me i keq.
+      const gapThroughStop =
+        position === 1
+          ? executionCandle.open <= stopLossPrice
+          : executionCandle.open >= stopLossPrice;
+
+      const gapThroughTarget =
+        position === 1
+          ? executionCandle.open >= takeProfitPrice
+          : executionCandle.open <= takeProfitPrice;
+
+      if (gapThroughStop) {
+        closePosition(
+          executionCandle.open,
+          executionTime,
+          "STOP_LOSS"
+        );
+        continue;
+      }
+
+      if (gapThroughTarget) {
+        closePosition(
+          executionCandle.open,
+          executionTime,
+          "TAKE_PROFIT"
+        );
+        continue;
+      }
+
       const hitStop =
         position === 1
           ? executionCandle.low <= stopLossPrice
@@ -246,9 +395,9 @@ export async function GET() {
           ? executionCandle.high >= takeProfitPrice
           : executionCandle.low <= takeProfitPrice;
 
+      // Me te dhenat OHLC nuk dime cila u prek e para.
+      // Supozim konservator: SL i pari.
       if (hitStop && hitTarget) {
-        // Conservative assumption: SL is hit first if the
-        // candle touches both levels and intrabar order is unknown.
         closePosition(
           stopLossPrice,
           executionTime,
@@ -269,7 +418,6 @@ export async function GET() {
       }
     }
 
-    // Close any remaining position at the final candle close.
     const last = candles[candles.length - 1];
 
     if (position !== 0) {
@@ -277,54 +425,76 @@ export async function GET() {
     }
 
     const totalTrades = trades.length;
+
+    const netProfit = equity - initialCapital;
     const netReturnPct =
-      ((equity / initialCapital) - 1) * 100;
+      (netProfit / initialCapital) * 100;
 
     const profitFactor =
-      grossLosses > 0
-        ? grossWins / grossLosses
-        : grossWins > 0
+      grossLossMoney > 0
+        ? grossProfitMoney / grossLossMoney
+        : grossProfitMoney > 0
           ? null
           : 0;
+
+    const averageNetTradePct =
+      totalTrades > 0
+        ? trades.reduce(
+            (sum, trade) => sum + trade.netReturnPct,
+            0
+          ) / totalTrades
+        : 0;
 
     return NextResponse.json(
       {
         symbol: "XAU/USD",
-        strategy: "EMA 9/21/200 + RSI 14 + MACD",
+        strategy:
+          "EMA 9/21/200 + RSI 14 + MACD + ATR filters",
         timeframe: "5min",
         candlesTested: candles.length,
         testStart: candles[0].datetime,
         testEnd: last.datetime,
+
         initialCapital,
-        finalCapital: Number(equity.toFixed(2)),
-        netProfit: Number(
-          (equity - initialCapital).toFixed(2)
-        ),
-        netReturnPct: Number(netReturnPct.toFixed(2)),
+        finalCapital: round(equity),
+        netProfit: round(netProfit),
+        netReturnPct: round(netReturnPct),
+
         totalTrades,
         wins,
         losses,
-        breakeven: totalTrades - wins - losses,
+        breakeven,
+
         winRatePct:
           totalTrades > 0
-            ? Number(
-                ((wins / totalTrades) * 100).toFixed(2)
-              )
+            ? round((wins / totalTrades) * 100)
             : 0,
+
         profitFactor:
           profitFactor === null
             ? null
-            : Number(profitFactor.toFixed(2)),
-        maxDrawdownPct: Number(maxDrawdownPct.toFixed(2)),
-        costBpsPerSide: costInput,
-        estimatedRoundTripCostPct: Number(
-          (2 * costPctPerSide).toFixed(4)
+            : round(profitFactor, 3),
+
+        grossProfit: round(grossProfitMoney),
+        grossLoss: round(grossLossMoney),
+        averageNetTradePct: round(
+          averageNetTradePct,
+          4
         ),
-        stopLossATRMultiplier: 1.5,
-        takeProfitRiskReward: 2,
+        maxDrawdownPct: round(maxDrawdownPct),
+
+        costBpsPerSide,
+        slippageBpsPerSide,
+        estimatedRoundTripCostBps:
+          totalCostBpsPerRoundTrip,
+
+        stopLossATRMultiplier,
+        takeProfitRiskReward: riskReward,
+
         trades,
+
         disclaimer:
-          "Backtest historik, jo garanci fitimi. TP/SL testohen me high/low te qiririt. Nese te dyja preken ne te njejtin qiri, supozohet se SL preket i pari. Kostot, spread-i, slippage dhe ekzekutimi real mund te ndryshojne rezultatet.",
+          "Backtest historik, jo garanci fitimi. Kostot dhe slippage jane supozime, jo kuotime te matura nga brokeri. Nuk perfshihen komisionet specifike te brokerit, financimi overnight ose ekzekutimi real. Nese SL dhe TP preken brenda te njejtit qiri, llogaritet SL i pari.",
       },
       {
         headers: {
