@@ -1,5 +1,6 @@
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import {
   analyzeCandles,
   calculateATR,
@@ -8,6 +9,48 @@ import {
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+const COOKIE_NAME = "keli_access";
+
+function hasValidSession(request: NextRequest): boolean {
+  const token = request.cookies.get(COOKIE_NAME)?.value;
+  const secret = process.env.ACCESS_ADMIN_SECRET;
+
+  if (!token || !secret) return false;
+
+  try {
+    const [payload, signature] = token.split(".");
+    if (!payload || !signature) return false;
+
+    const expected = createHmac("sha256", secret)
+      .update(payload)
+      .digest("hex");
+
+    const a = Buffer.from(signature);
+    const b = Buffer.from(expected);
+
+    if (a.length !== b.length || !timingSafeEqual(a, b)) {
+      return false;
+    }
+
+    const session = JSON.parse(
+      Buffer.from(payload, "base64url").toString("utf8")
+    );
+
+    if (session.access !== true) return false;
+
+    if (
+      session.expiresAt &&
+      Date.parse(session.expiresAt) <= Date.now()
+    ) {
+      return false;
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 type Position = 1 | -1 | 0;
 type TradeResult = "WIN" | "LOSS" | "BREAKEVEN";
@@ -42,9 +85,7 @@ type Trade = {
 
 function envNumber(name: string, fallback: number): number {
   const raw = process.env[name];
-
   if (raw === undefined || raw.trim() === "") return fallback;
-
   return Number(raw);
 }
 
@@ -52,7 +93,14 @@ function round(value: number, decimals = 2): number {
   return Number(value.toFixed(decimals));
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
+  if (!hasValidSession(request)) {
+    return NextResponse.json(
+      { error: "Duhet nje kod aktiv per te perdorur backtest-in." },
+      { status: 401 }
+    );
+  }
+
   const apiKey = process.env.TWELVE_DATA_API_KEY;
 
   if (!apiKey) {
@@ -202,13 +250,11 @@ export async function GET() {
       const finalGrossPct =
         ((position * (rawExitPrice - entryPrice)) / entryPrice) * 100;
 
-      const combinedGrossPct =
-        tp1Hit
-          ? tp1GrossPct * tp1CloseFraction +
-            finalGrossPct * remainingFraction
-          : finalGrossPct;
+      const combinedGrossPct = tp1Hit
+        ? tp1GrossPct * tp1CloseFraction +
+          finalGrossPct * remainingFraction
+        : finalGrossPct;
 
-      // Kostot perfshijne hyrjen dhe daljen; supozim i thjeshtuar.
       const tradingCostPct =
         (totalCostBpsPerRoundTrip / 10000) * 100;
 
@@ -405,8 +451,6 @@ export async function GET() {
           ? executionCandle.high >= takeProfit2Price
           : executionCandle.low <= takeProfit2Price;
 
-      // Nese SL dhe objektivi i pare preken ne te njejtin qiri,
-      // supozohet SL i pari. Ky eshte vleresim konservator.
       if (hitStop && !tp1Hit && hitTP1) {
         closePosition(executionCandle.open, executionTime, "STOP_LOSS");
         continue;
@@ -481,48 +525,37 @@ export async function GET() {
     return NextResponse.json(
       {
         symbol: "XAU/USD",
-        strategy:
-          "EMA 9/21/200 + RSI 14 + MACD + ATR filters",
+        strategy: "EMA 9/21/200 + RSI 14 + MACD + ATR filters",
         timeframe: "5min",
         candlesTested: candles.length,
         testStart: candles[0].datetime,
         testEnd: last.datetime,
-
         initialCapital,
         finalCapital: round(equity),
         netProfit: round(netProfit),
         netReturnPct: round(netReturnPct),
-
         totalTrades,
         wins,
         losses,
         breakeven,
-
         tp1Hits,
         tp2Hits,
         tp1CloseFraction: tp1CloseFraction * 100,
-
         winRatePct:
           totalTrades > 0 ? round((wins / totalTrades) * 100) : 0,
-
         profitFactor:
           profitFactor === null ? null : round(profitFactor, 3),
-
         grossProfit: round(grossProfitMoney),
         grossLoss: round(grossLossMoney),
         averageNetTradePct: round(averageNetTradePct, 4),
         maxDrawdownPct: round(maxDrawdownPct),
-
         costBpsPerSide,
         slippageBpsPerSide,
         estimatedRoundTripCostBps: totalCostBpsPerRoundTrip,
-
         stopLossATRMultiplier,
         tp1RiskReward,
         tp2RiskReward,
-
         trades,
-
         disclaimer:
           "Backtest historik, jo garanci fitimi. TP1 mbyll 50% te pozicionit dhe TP2 synon pjesen e mbetur. Kostot dhe slippage jane supozime. Qirinjte 5-minutesh nuk tregojne gjithmone rendin e sakte te prekjes se niveleve; rezultatet jane vleresime.",
       },
