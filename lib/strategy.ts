@@ -16,6 +16,9 @@ export type StrategyResult = {
   price: number;
   confidence: number;
   stopLoss: number | null;
+  takeProfit1: number | null;
+  takeProfit2: number | null;
+  /** Backward compatibility: takeProfit eshte i njejte me TP2. */
   takeProfit: number | null;
   riskReward: number;
   rsi: number | null;
@@ -342,12 +345,10 @@ export function analyzeCandles(candles: Candle[]): StrategyResult {
     const range = candle.high - candle.low;
     if (range <= 0) return "WAIT";
 
-    // Lejohet me shume distance nga EMA 21, por jo hyrje ekstreme.
     if (Math.abs(candle.close - ema21) > atr * 2) {
       return "WAIT";
     }
 
-    // Filtron tregun pothuajse pa levizje dhe qirinjt jashtezakonisht te medhenj.
     if (
       atr / candle.close < 0.00002 ||
       range < averageRange * 0.25 ||
@@ -414,7 +415,6 @@ export function analyzeCandles(candles: Candle[]): StrategyResult {
     if (bullishTrend) buyScore += 20;
     if (bearishTrend) sellScore += 20;
 
-    // Interval me i gjere RSI per me shume mundesi sinjali.
     if (rsi >= 50 && rsi <= 70 && rsi >= previousRsi) {
       buyScore += 15;
     }
@@ -437,8 +437,6 @@ export function analyzeCandles(candles: Candle[]): StrategyResult {
     if (bullishMomentum) buyScore += 15;
     if (bearishMomentum) sellScore += 15;
 
-    // Pragu i ri: 60 pike. Nuk kerkohet me trend perfekt EMA 200.
-    // Duhet gjithsesi qe drejtimi i EMA 9/21 te perputhet me sinjalin.
     const minimumScore = 60;
 
     if (
@@ -579,41 +577,46 @@ export function analyzeCandles(candles: Candle[]): StrategyResult {
       `Piket nuk jane probabilitet fitimi.`;
   }
 
-  // SL dhe TP bazohen ne ATR; raporti synim/rrezik eshte 2:1.
+  // Hyrja merret nga mbyllja e qiririt te fundit.
+  // Rreziku fillestar = 1.5 x ATR.
+  // TP1 = 1R, TP2 = 2R.
   const stopDistance =
     atr !== null && atr > 0 ? atr * 1.5 : null;
 
-  const stopLoss =
-    signal !== "WAIT" && stopDistance !== null
-      ? roundPrice(
-          lastCandle.close +
-            (signal === "BUY" ? -stopDistance : stopDistance)
-        )
-      : null;
+  const entryPrice = lastCandle.close;
+  let stopLoss: number | null = null;
+  let takeProfit1: number | null = null;
+  let takeProfit2: number | null = null;
 
-  const takeProfit =
-    signal !== "WAIT" && stopDistance !== null
-      ? roundPrice(
-          lastCandle.close +
-            (signal === "BUY" ? stopDistance * 2 : -stopDistance * 2)
-        )
-      : null;
+  if (signal !== "WAIT" && stopDistance !== null) {
+    const direction = signal === "BUY" ? 1 : -1;
+
+    stopLoss = roundPrice(entryPrice - direction * stopDistance);
+    takeProfit1 = roundPrice(entryPrice + direction * stopDistance);
+    takeProfit2 = roundPrice(entryPrice + direction * stopDistance * 2);
+  }
 
   return {
     signal,
     action: signal,
-    price: roundPrice(lastCandle.close),
+    price: roundPrice(entryPrice),
     confidence,
     stopLoss,
-    takeProfit,
+    takeProfit1,
+    takeProfit2,
+    // Mban kompatibilitet me kodin e vjeter qe lexon takeProfit.
+    takeProfit: takeProfit2,
     riskReward:
-      stopLoss !== null && takeProfit !== null ? 2 : 0,
+      stopLoss !== null && takeProfit2 !== null ? 2 : 0,
     rsi: roundIndicator(rsi),
     ema9: roundIndicator(ema9),
     ema21: roundIndicator(ema21),
     ema200: roundIndicator(ema200),
     atr: roundIndicator(atr),
-    reason,
+    reason:
+      signal === "WAIT"
+        ? reason
+        : `${reason} TP1 = 1R, TP2 = 2R, SL = 1.5 x ATR.`,
     timestamp: lastCandle.datetime,
     signalAt,
   };
