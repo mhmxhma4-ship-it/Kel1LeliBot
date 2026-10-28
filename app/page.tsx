@@ -4,135 +4,118 @@
 import { useCallback, useEffect, useState } from "react";
 
 type Signal = {
-  symbol: string;
-  price: string | null;
-  status: string;
-  updated: string;
-  signal: "BUY" | "SELL" | "WAIT";
-  reason: string;
-  indicators?: {
-    ema9: number;
-    ema21: number;
-    ema200: number;
-    rsi14: number;
-  };
-  candleTime?: string;
+  symbol?: string;
+  signal?: string;
+  action?: string;
+  price?: number | string;
+  close?: number | string;
+  rsi?: number | string;
+  ema9?: number | string;
+  ema21?: number | string;
+  ema200?: number | string;
+  timestamp?: string;
+  time?: string;
+  reason?: string;
+  error?: string;
+  [key: string]: unknown;
 };
 
 type Trade = {
-  side: "BUY" | "SELL";
-  entryTime: string;
-  exitTime: string;
-  entryPrice: number;
-  exitPrice: number;
-  netReturnPct: number;
-  result: "WIN" | "LOSS" | "BREAKEVEN";
+  side?: string;
+  entry?: number;
+  exit?: number;
+  pnlPct?: number;
+  netPct?: number;
+  pnl?: number;
+  profit?: number;
+  result?: string;
+  [key: string]: unknown;
 };
 
 type Backtest = {
-  symbol: string;
-  strategy: string;
-  timeframe: string;
-  candlesTested: number;
-  testStart: string;
-  testEnd: string;
-  initialCapital: number;
-  finalCapital: number;
-  netProfit: number;
-  netReturnPct: number;
-  totalTrades: number;
-  wins: number;
-  losses: number;
-  breakeven: number;
-  winRatePct: number;
-  profitFactor: number | null;
-  maxDrawdownPct: number;
-  costBpsPerSide: number;
-  estimatedRoundTripCostPct: number;
-  trades: Trade[];
+  error?: string;
+  symbol?: string;
+  totalTrades?: number;
+  tradesCount?: number;
+  winRate?: number;
+  wins?: number;
+  losses?: number;
+  profitFactor?: number;
+  netProfitPct?: number;
+  totalReturnPct?: number;
+  startingCapital?: number;
+  finalCapital?: number;
+  maxDrawdownPct?: number;
+  trades?: Trade[];
+  [key: string]: unknown;
 };
 
-export default function Home() {
-  const [data, setData] = useState<Signal>({
-    symbol: "XAU/USD",
-    price: null,
-    status: "Po lidhet...",
-    updated: "Ne pritje",
-    signal: "WAIT",
-    reason: "Po priten te dhenat e tregut.",
-  });
+function displayValue(value: unknown, suffix = "") {
+  if (value === undefined || value === null || value === "") return "--";
+  if (typeof value === "number") return `${value.toFixed(2)}${suffix}`;
+  if (typeof value === "string") return `${value}${suffix}`;
+  return String(value);
+}
 
-  const [loading, setLoading] = useState(true);
-  const [backtestLoading, setBacktestLoading] = useState(false);
+function findValue(data: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    if (data[key] !== undefined && data[key] !== null) {
+      return data[key];
+    }
+  }
+  return undefined;
+}
+
+export default function Home() {
+  const [signal, setSignal] = useState<Signal | null>(null);
   const [backtest, setBacktest] = useState<Backtest | null>(null);
+  const [signalLoading, setSignalLoading] = useState(true);
+  const [backtestLoading, setBacktestLoading] = useState(true);
+  const [signalError, setSignalError] = useState("");
   const [backtestError, setBacktestError] = useState("");
+  const [lastSignalUpdate, setLastSignalUpdate] = useState("");
+  const [lastBacktestUpdate, setLastBacktestUpdate] = useState("");
 
   const refreshSignal = useCallback(async () => {
-    setLoading(true);
-
     try {
       const response = await fetch("/api/signals", {
         cache: "no-store",
       });
+      const data = await response.json();
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Gabim ne API");
+      if (!response.ok || data.error) {
+        throw new Error(data.error || "Nuk u mor sinjali.");
       }
 
-      const validSignals = ["BUY", "SELL", "WAIT"];
-      const nextSignal = validSignals.includes(result.signal)
-        ? result.signal
-        : "WAIT";
-
-      setData({
-        symbol: result.symbol || "XAU/USD",
-        price:
-          result.price !== null && result.price !== undefined
-            ? String(result.price)
-            : null,
-        status: result.status || "Te dhenat u moren",
-        updated: new Date().toLocaleTimeString(),
-        signal: nextSignal,
-        reason: result.reason || "Nuk ka arsye te disponueshme.",
-        indicators: result.indicators,
-        candleTime: result.candleTime,
-      });
+      setSignal(data);
+      setSignalError("");
+      setLastSignalUpdate(new Date().toLocaleTimeString());
     } catch (error) {
-      setData((old) => ({
-        ...old,
-        status:
-          error instanceof Error
-            ? error.message
-            : "Gabim ne lidhjen me API",
-      }));
+      setSignalError(
+        error instanceof Error ? error.message : "Gabim gjate marrjes se sinjalit."
+      );
     } finally {
-      setLoading(false);
+      setSignalLoading(false);
     }
   }, []);
 
-  const runBacktest = useCallback(async () => {
-    setBacktestLoading(true);
-    setBacktestError("");
-
+  const refreshBacktest = useCallback(async () => {
     try {
       const response = await fetch("/api/backtest", {
         cache: "no-store",
       });
+      const data = await response.json();
 
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || "Backtest-i deshtoi");
+      if (!response.ok || data.error) {
+        throw new Error(data.error || "Backtest-i deshtoi.");
       }
 
-      setBacktest(result);
+      setBacktest(data);
+      setBacktestError("");
+      setLastBacktestUpdate(new Date().toLocaleTimeString());
     } catch (error) {
       setBacktestError(
-        error instanceof Error
-          ? error.message
-          : "Gabim gjate backtest-it"
+        error instanceof Error ? error.message : "Gabim gjate backtest-it."
       );
     } finally {
       setBacktestLoading(false);
@@ -140,207 +123,432 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    refreshSignal();
+    let active = true;
+    let signalBusy = false;
+    let backtestBusy = false;
 
-    const timer = setInterval(refreshSignal, 60000);
+    const safeSignal = async () => {
+      if (!active || signalBusy) return;
+      signalBusy = true;
+      try {
+        await refreshSignal();
+      } finally {
+        signalBusy = false;
+      }
+    };
 
-    return () => clearInterval(timer);
-  }, [refreshSignal]);
+    const safeBacktest = async () => {
+      if (!active || backtestBusy) return;
+      backtestBusy = true;
+      try {
+        await refreshBacktest();
+      } finally {
+        backtestBusy = false;
+      }
+    };
+
+    void safeSignal();
+    void safeBacktest();
+
+    const signalTimer = window.setInterval(() => {
+      void safeSignal();
+    }, 60_000);
+
+    const backtestTimer = window.setInterval(() => {
+      void safeBacktest();
+    }, 60_000);
+
+    return () => {
+      active = false;
+      window.clearInterval(signalTimer);
+      window.clearInterval(backtestTimer);
+    };
+  }, [refreshSignal, refreshBacktest]);
+
+  const signalName = String(
+    findValue(signal ?? {}, ["signal", "action", "recommendation"]) ?? "WAIT"
+  ).toUpperCase();
 
   const signalColor =
-    data.signal === "BUY"
-      ? "#16a34a"
-      : data.signal === "SELL"
-        ? "#dc2626"
-        : "#d97706";
+    signalName.includes("BUY") || signalName.includes("LONG")
+      ? "#22c55e"
+      : signalName.includes("SELL") || signalName.includes("SHORT")
+        ? "#ef4444"
+        : "#facc15";
 
-  const money = (value: number) =>
-    new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "USD",
-    }).format(value);
+  const tradeCount = findValue(backtest ?? {}, [
+    "totalTrades",
+    "tradesCount",
+    "total_trades",
+  ]);
+
+  const winRate = findValue(backtest ?? {}, [
+    "winRate",
+    "win_rate",
+  ]);
+
+  const profitFactor = findValue(backtest ?? {}, [
+    "profitFactor",
+    "profit_factor",
+  ]);
+
+  const netReturn = findValue(backtest ?? {}, [
+    "netProfitPct",
+    "totalReturnPct",
+    "net_return_pct",
+    "total_return_pct",
+  ]);
+
+  const maxDrawdown = findValue(backtest ?? {}, [
+    "maxDrawdownPct",
+    "max_drawdown_pct",
+  ]);
+
+  const finalCapital = findValue(backtest ?? {}, [
+    "finalCapital",
+    "final_capital",
+  ]);
+
+  const startingCapital = findValue(backtest ?? {}, [
+    "startingCapital",
+    "starting_capital",
+  ]);
+
+  const trades = Array.isArray(backtest?.trades)
+    ? backtest.trades.slice(-20).reverse()
+    : [];
+
+  const panelStyle = {
+    background: "#111827",
+    border: "1px solid #273449",
+    borderRadius: 16,
+    padding: 18,
+  } as const;
+
+  const labelStyle = {
+    color: "#94a3b8",
+    fontSize: 13,
+  } as const;
+
+  const valueStyle = {
+    fontSize: 24,
+    fontWeight: 700,
+    marginTop: 8,
+    overflowWrap: "anywhere" as const,
+  };
 
   return (
-    <main>
-      <header>
-        <div>
-          <h1>KeliLelibot</h1>
-          <p className="subtitle">Gold Trading Dashboard</p>
-        </div>
-        <span className="badge">{data.symbol}</span>
-      </header>
-
-      <section className="panel">
-        <p className="subtitle">Cmimi i arit</p>
-
-        <h2 className="price">
-          {data.price !== null ? `$${data.price}` : "—"}
-        </h2>
-
-        <p>Statusi: {data.status}</p>
-        <p className="note">Perditesuar: {data.updated}</p>
-
-        <p className="note">
-          {loading
-            ? "Po merren te dhenat..."
-            : "Perditesim automatik cdo 60 sekonda"}
-        </p>
-
-        <button
-          className="neutral"
-          onClick={refreshSignal}
-          disabled={loading}
-        >
-          {loading ? "Po rifreskohet..." : "Rifresko cmimin"}
-        </button>
-      </section>
-
-      <section className="panel">
-        <h2>Sinjali i tregut</h2>
-
-        <h1
+    <main
+      style={{
+        minHeight: "100vh",
+        background: "#080d18",
+        color: "#f8fafc",
+        padding: "24px 16px 48px",
+        fontFamily: "Arial, sans-serif",
+      }}
+    >
+      <div style={{ maxWidth: 1100, margin: "0 auto" }}>
+        <header
           style={{
-            color: signalColor,
-            fontSize: 38,
-            fontWeight: 800,
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: 12,
+            marginBottom: 26,
           }}
         >
-          {data.signal}
-        </h1>
-
-        <p>{data.reason}</p>
-
-        {data.indicators && (
           <div>
-            <p>EMA 9: {data.indicators.ema9}</p>
-            <p>EMA 21: {data.indicators.ema21}</p>
-            <p>EMA 200: {data.indicators.ema200}</p>
-            <p>RSI 14: {data.indicators.rsi14}</p>
-          </div>
-        )}
-
-        {data.candleTime && (
-          <p className="note">
-            Koha e qiriut te fundit: {data.candleTime}
-          </p>
-        )}
-
-        <p className="note">
-          Strategjia: EMA 9/21/200 + RSI 14.
-          Sinjalet jane informuese dhe nuk garantojne fitim.
-        </p>
-      </section>
-
-      <section className="panel">
-        <h2>Backtest historik</h2>
-        <p>
-          Testo strategjine XAU/USD mbi te dhenat historike
-          dhe shiko rezultatin pas kostove te parashikuara.
-        </p>
-
-        <button
-          className="neutral"
-          onClick={runBacktest}
-          disabled={backtestLoading}
-        >
-          {backtestLoading
-            ? "Po analizohet historiku..."
-            : "Nis backtest-in"}
-        </button>
-
-        {backtestError && (
-          <p style={{ color: "#dc2626" }}>
-            Gabim: {backtestError}
-          </p>
-        )}
-
-        {backtest && (
-          <div>
-            <h3>Rezultatet</h3>
-
-            <p>Periudha: {backtest.testStart} - {backtest.testEnd}</p>
-            <p>Qirinj te testuar: {backtest.candlesTested}</p>
-            <p>Strategjia: {backtest.strategy}</p>
-            <p>Intervali: {backtest.timeframe}</p>
-
-            <hr />
-
-            <p>Kapitali fillestar: {money(backtest.initialCapital)}</p>
-            <p>Kapitali perfundimtar: {money(backtest.finalCapital)}</p>
-
-            <p
+            <div
               style={{
-                color: backtest.netProfit >= 0 ? "#16a34a" : "#dc2626",
+                color: "#fbbf24",
+                fontSize: 12,
+                letterSpacing: 3,
                 fontWeight: 700,
               }}
             >
-              Fitimi/Humbja neto: {money(backtest.netProfit)}
-              {" "}({backtest.netReturnPct}%)
-            </p>
-
-            <hr />
-
-            <p>Gjithsej tregtime: {backtest.totalTrades}</p>
-            <p>Fitore: {backtest.wins}</p>
-            <p>Humbje: {backtest.losses}</p>
-            <p>Barazime: {backtest.breakeven}</p>
-            <p>Perqindja e fitoreve: {backtest.winRatePct}%</p>
-            <p>
-              Profit factor:{" "}
-              {backtest.profitFactor === null
-                ? "Pa humbje neto"
-                : backtest.profitFactor}
-            </p>
-            <p>Renia maksimale e kapitalit: {backtest.maxDrawdownPct}%</p>
-
-            <hr />
-
-            <p>
-              Kosto per ane: {backtest.costBpsPerSide} bps
-            </p>
-            <p>
-              Kosto e vleresuar vajtje-ardhje:{" "}
-              {backtest.estimatedRoundTripCostPct}%
-            </p>
-
-            <h3>Historiku i tregtimeve</h3>
-
-            {backtest.trades.length === 0 ? (
-              <p>Nuk u krijuan tregtime ne periudhen e testuar.</p>
-            ) : (
-              <div style={{ overflowX: "auto" }}>
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Tipi</th>
-                      <th>Hyrja</th>
-                      <th>Dalja</th>
-                      <th>Rezultati neto</th>
-                      <th>Statusi</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[...backtest.trades].reverse().map((trade, index) => (
-                      <tr key={`${trade.entryTime}-${index}`}>
-                        <td>{trade.side}</td>
-                        <td>{trade.entryPrice}</td>
-                        <td>{trade.exitPrice}</td>
-                        <td>{trade.netReturnPct}%</td>
-                        <td>{trade.result}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
-            <p className="note">
-              Backtest-i eshte simulim historik. Kostot jane
-              vleresime dhe rezultati nuk parashikon fitimin ne te ardhmen.
+              GOLD TRADING SYSTEM
+            </div>
+            <h1 style={{ fontSize: 30, margin: "8px 0" }}>
+              Keli<span style={{ color: "#fbbf24" }}>Leli</span>bot
+            </h1>
+            <p style={{ color: "#94a3b8", margin: 0 }}>
+              XAU/USD · EMA 9/21/200 · RSI 14
             </p>
           </div>
-        )}
-      </section>
+
+          <div
+            style={{
+              ...panelStyle,
+              padding: "12px 16px",
+              fontSize: 13,
+            }}
+          >
+            <div style={{ color: "#22c55e" }}>● Sistemi aktiv ne faqe</div>
+            <div style={{ color: "#94a3b8", marginTop: 6 }}>
+              Rifreskim: cdo 60 sekonda
+            </div>
+          </div>
+        </header>
+
+        <section
+          style={{
+            ...panelStyle,
+            marginBottom: 18,
+            borderColor: signalColor,
+          }}
+        >
+          <div style={labelStyle}>SINJALI AKTUAL · XAU/USD</div>
+
+          <div
+            style={{
+              fontSize: 34,
+              fontWeight: 800,
+              color: signalColor,
+              marginTop: 10,
+            }}
+          >
+            {signalLoading && !signal ? "Duke ngarkuar..." : signalName}
+          </div>
+
+          {signalError && (
+            <p style={{ color: "#f87171" }}>
+              Gabim sinjali: {signalError}
+            </p>
+          )}
+
+          {signal?.reason && (
+            <p style={{ color: "#cbd5e1" }}>{signal.reason}</p>
+          )}
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
+              gap: 16,
+              marginTop: 22,
+            }}
+          >
+            {[
+              {
+                label: "Cmimi",
+                value: findValue(signal ?? {}, ["price", "close"]),
+              },
+              { label: "RSI 14", value: signal?.rsi },
+              { label: "EMA 9", value: signal?.ema9 },
+              { label: "EMA 21", value: signal?.ema21 },
+              { label: "EMA 200", value: signal?.ema200 },
+            ].map((item) => (
+              <div key={item.label}>
+                <div style={labelStyle}>{item.label}</div>
+                <div style={{ fontSize: 18, fontWeight: 700, marginTop: 7 }}>
+                  {displayValue(item.value)}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ color: "#64748b", fontSize: 12, marginTop: 18 }}>
+            Perditesuar: {lastSignalUpdate || "--"}
+          </div>
+
+          <button
+            onClick={() => void refreshSignal()}
+            disabled={signalLoading}
+            style={buttonStyle}
+          >
+            {signalLoading ? "Duke ngarkuar..." : "Rifresko sinjalin"}
+          </button>
+        </section>
+
+        <section style={{ marginBottom: 24 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: 12,
+              marginBottom: 14,
+            }}
+          >
+            <h2 style={{ fontSize: 22, margin: 0 }}>Backtest automatik</h2>
+            <button
+              onClick={() => void refreshBacktest()}
+              disabled={backtestLoading}
+              style={buttonStyle}
+            >
+              {backtestLoading ? "Duke llogaritur..." : "Rillogarit tani"}
+            </button>
+          </div>
+
+          {backtestError && (
+            <div
+              style={{
+                ...panelStyle,
+                color: "#f87171",
+                marginBottom: 14,
+              }}
+            >
+              Gabim backtest-i: {backtestError}
+            </div>
+          )}
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(145px, 1fr))",
+              gap: 12,
+            }}
+          >
+            {[
+              { label: "Tregtime", value: displayValue(tradeCount) },
+              {
+                label: "Win rate",
+                value: displayValue(winRate, "%"),
+              },
+              {
+                label: "Profit factor",
+                value: displayValue(profitFactor),
+              },
+              {
+                label: "Kthimi neto",
+                value: displayValue(netReturn, "%"),
+              },
+              {
+                label: "Max drawdown",
+                value: displayValue(maxDrawdown, "%"),
+              },
+              {
+                label: "Kapitali final",
+                value: displayValue(finalCapital),
+              },
+            ].map((item) => (
+              <div key={item.label} style={panelStyle}>
+                <div style={labelStyle}>{item.label}</div>
+                <div style={valueStyle}>{item.value}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ ...panelStyle, marginTop: 14 }}>
+            <div style={labelStyle}>Kapitali fillestar</div>
+            <div style={{ fontSize: 20, fontWeight: 700, marginTop: 7 }}>
+              {displayValue(startingCapital)}
+            </div>
+            <div style={{ color: "#64748b", fontSize: 12, marginTop: 12 }}>
+              Backtest-i i fundit: {lastBacktestUpdate || "--"}
+            </div>
+          </div>
+        </section>
+
+        <section style={panelStyle}>
+          <h2 style={{ fontSize: 21, marginTop: 0 }}>Tregtimet e fundit</h2>
+
+          {trades.length === 0 ? (
+            <p style={{ color: "#94a3b8" }}>
+              {backtestLoading
+                ? "Duke ngarkuar tregtimet..."
+                : "Nuk ka tregtime per tu shfaqur, ose API nuk ktheu listen e tregtimeve."}
+            </p>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table
+                style={{
+                  width: "100%",
+                  borderCollapse: "collapse",
+                  textAlign: "left",
+                  fontSize: 13,
+                }}
+              >
+                <thead>
+                  <tr style={{ color: "#94a3b8" }}>
+                    {["Drejtimi", "Hyrja", "Dalja", "Rezultati"].map(
+                      (heading) => (
+                        <th
+                          key={heading}
+                          style={{
+                            padding: "12px 10px",
+                            borderBottom: "1px solid #273449",
+                          }}
+                        >
+                          {heading}
+                        </th>
+                      )
+                    )}
+                  </tr>
+                </thead>
+                <tbody>
+                  {trades.map((trade, index) => {
+                    const result = findValue(trade, [
+                      "netPct",
+                      "pnlPct",
+                      "pnl",
+                      "profit",
+                      "result",
+                    ]);
+
+                    return (
+                      <tr key={`${index}-${String(trade.entry ?? "")}`}>
+                        <td style={cellStyle}>
+                          {String(trade.side ?? "--").toUpperCase()}
+                        </td>
+                        <td style={cellStyle}>
+                          {displayValue(trade.entry)}
+                        </td>
+                        <td style={cellStyle}>
+                          {displayValue(trade.exit)}
+                        </td>
+                        <td
+                          style={{
+                            ...cellStyle,
+                            color:
+                              typeof result === "number"
+                                ? result >= 0
+                                  ? "#22c55e"
+                                  : "#ef4444"
+                                : "#f8fafc",
+                          }}
+                        >
+                          {displayValue(result, typeof result === "number" ? "%" : "")}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        <footer
+          style={{
+            color: "#64748b",
+            fontSize: 12,
+            lineHeight: 1.6,
+            marginTop: 20,
+          }}
+        >
+          Ky panel ben analiza dhe backtest, jo tregtime reale. Rezultatet
+          historike nuk garantojne fitime ne te ardhmen. Mbaje faqen hapur per
+          rifreskim automatik.
+        </footer>
+      </div>
     </main>
   );
 }
+
+const buttonStyle = {
+  background: "#fbbf24",
+  color: "#111827",
+  border: "none",
+  borderRadius: 10,
+  padding: "11px 15px",
+  fontWeight: 700,
+  cursor: "pointer",
+} as const;
+
+const cellStyle = {
+  padding: "13px 10px",
+  borderBottom: "1px solid #273449",
+} as const;
