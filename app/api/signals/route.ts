@@ -5,25 +5,6 @@ import { analyzeCandles, parseCandles } from "@/lib/strategy";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-function calculateLatestEMA(
-  values: number[],
-  period: number
-): number | null {
-  if (values.length < period) return null;
-
-  let ema =
-    values.slice(0, period).reduce((sum, value) => sum + value, 0) /
-    period;
-
-  const multiplier = 2 / (period + 1);
-
-  for (let i = period; i < values.length; i++) {
-    ema = values[i] * multiplier + ema * (1 - multiplier);
-  }
-
-  return Number.isFinite(ema) ? ema : null;
-}
-
 function roundToTwo(value: number | null): number | null {
   if (value === null || !Number.isFinite(value)) return null;
   return Number(value.toFixed(2));
@@ -42,7 +23,7 @@ export async function GET() {
   try {
     const url = new URL("https://api.twelvedata.com/time_series");
     url.searchParams.set("symbol", "XAU/USD");
-    url.searchParams.set("interval", "5min");
+    url.searchParams.set("interval", "1min");
     url.searchParams.set("outputsize", "500");
     url.searchParams.set("apikey", apiKey);
 
@@ -82,35 +63,8 @@ export async function GET() {
 
     const orderedCandles = [...candles].sort(
       (a, b) =>
-        new Date(a.datetime).getTime() -
-        new Date(b.datetime).getTime()
+        Date.parse(a.datetime) - Date.parse(b.datetime)
     );
-
-    const closes = orderedCandles
-      .map((candle) => Number(candle.close))
-      .filter((value) => Number.isFinite(value) && value > 0);
-
-    if (closes.length < 220) {
-      return NextResponse.json(
-        {
-          error:
-            "Nuk ka mjaft cmime te vlefshme per llogaritjen e EMA-ve.",
-          candlesReceived: closes.length,
-        },
-        { status: 422 }
-      );
-    }
-
-    const ema9 = calculateLatestEMA(closes, 9);
-    const ema21 = calculateLatestEMA(closes, 21);
-    const ema200 = calculateLatestEMA(closes, 200);
-
-    if (ema9 === null || ema21 === null || ema200 === null) {
-      return NextResponse.json(
-        { error: "Llogaritja e EMA-ve deshtoi." },
-        { status: 422 }
-      );
-    }
 
     const result = analyzeCandles(orderedCandles);
 
@@ -118,16 +72,20 @@ export async function GET() {
       {
         symbol: "XAU/USD",
         ...result,
-        ema9: roundToTwo(ema9),
-        ema21: roundToTwo(ema21),
-        ema200: roundToTwo(ema200),
-        candlesReceived: closes.length,
-        interval: "5min",
+        ema9: roundToTwo(result.ema9),
+        ema21: roundToTwo(result.ema21),
+        ema200: roundToTwo(result.ema200),
+        candlesReceived: orderedCandles.length,
+        interval: "1min",
         updatedAt: new Date().toISOString(),
+        latestCandleAt:
+          orderedCandles[orderedCandles.length - 1].datetime,
       },
       {
         headers: {
-          "Cache-Control": "no-store, max-age=0",
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          Pragma: "no-cache",
+          Expires: "0",
         },
       }
     );
@@ -137,7 +95,7 @@ export async function GET() {
         error:
           error instanceof Error
             ? error.message
-            : "Gabim gjate llogaritjes se EMA-ve.",
+            : "Gabim gjate marrjes se te dhenave nga Twelve Data.",
       },
       { status: 500 }
     );
