@@ -26,6 +26,8 @@ type Trade = {
   exit?: number;
   entryPrice?: number;
   exitPrice?: number;
+  entryTime?: string;
+  exitTime?: string;
   pnlPct?: number;
   netPct?: number;
   netReturnPct?: number;
@@ -57,28 +59,60 @@ type Backtest = {
 };
 
 function displayValue(value: unknown, suffix = "") {
-  if (value === undefined || value === null || value === "") return "--";
-  if (typeof value === "number") return `${value.toFixed(2)}${suffix}`;
-  if (typeof value === "string") return `${value}${suffix}`;
+  if (value === undefined || value === null || value === "") {
+    return "--";
+  }
+
+  if (typeof value === "number") {
+    return `${value.toFixed(2)}${suffix}`;
+  }
+
+  if (typeof value === "string") {
+    return `${value}${suffix}`;
+  }
+
   return String(value);
 }
 
-function findValue(data: Record<string, unknown>, keys: string[]) {
+function findValue(
+  data: Record<string, unknown>,
+  keys: string[]
+) {
   for (const key of keys) {
     if (data[key] !== undefined && data[key] !== null) {
       return data[key];
     }
   }
+
   return undefined;
+}
+
+function displayTime(value: unknown) {
+  if (typeof value !== "string" || !value) {
+    return "--";
+  }
+
+  const match = value.match(
+    /(?:T|\s)(\d{2}:\d{2})(?::(\d{2}))?/
+  );
+
+  if (match) {
+    return `${match[1]}:${match[2] ?? "00"}`;
+  }
+
+  return value;
 }
 
 export default function Home() {
   const [signal, setSignal] = useState<Signal | null>(null);
   const [backtest, setBacktest] = useState<Backtest | null>(null);
+
   const [signalLoading, setSignalLoading] = useState(true);
   const [backtestLoading, setBacktestLoading] = useState(true);
+
   const [signalError, setSignalError] = useState("");
   const [backtestError, setBacktestError] = useState("");
+
   const [lastSignalUpdate, setLastSignalUpdate] = useState("");
   const [lastBacktestUpdate, setLastBacktestUpdate] = useState("");
 
@@ -87,6 +121,7 @@ export default function Home() {
       const response = await fetch("/api/signals", {
         cache: "no-store",
       });
+
       const data = await response.json();
 
       if (!response.ok || data.error) {
@@ -112,6 +147,7 @@ export default function Home() {
       const response = await fetch("/api/backtest", {
         cache: "no-store",
       });
+
       const data = await response.json();
 
       if (!response.ok || data.error) {
@@ -123,7 +159,9 @@ export default function Home() {
       setLastBacktestUpdate(new Date().toLocaleTimeString());
     } catch (error) {
       setBacktestError(
-        error instanceof Error ? error.message : "Gabim gjate backtest-it."
+        error instanceof Error
+          ? error.message
+          : "Gabim gjate backtest-it."
       );
     } finally {
       setBacktestLoading(false);
@@ -137,7 +175,9 @@ export default function Home() {
 
     const safeSignal = async () => {
       if (!active || signalBusy) return;
+
       signalBusy = true;
+
       try {
         await refreshSignal();
       } finally {
@@ -147,7 +187,9 @@ export default function Home() {
 
     const safeBacktest = async () => {
       if (!active || backtestBusy) return;
+
       backtestBusy = true;
+
       try {
         await refreshBacktest();
       } finally {
@@ -174,13 +216,18 @@ export default function Home() {
   }, [refreshSignal, refreshBacktest]);
 
   const signalName = String(
-    findValue(signal ?? {}, ["signal", "action", "recommendation"]) ?? "WAIT"
+    findValue(signal ?? {}, [
+      "signal",
+      "action",
+      "recommendation",
+    ]) ?? "WAIT"
   ).toUpperCase();
 
   const signalColor =
     signalName.includes("BUY") || signalName.includes("LONG")
       ? "#22c55e"
-      : signalName.includes("SELL") || signalName.includes("SHORT")
+      : signalName.includes("SELL") ||
+          signalName.includes("SHORT")
         ? "#ef4444"
         : "#facc15";
 
@@ -280,9 +327,11 @@ export default function Home() {
             >
               GOLD TRADING SYSTEM
             </div>
+
             <h1 style={{ fontSize: 30, margin: "8px 0" }}>
               Keli<span style={{ color: "#fbbf24" }}>Leli</span>bot
             </h1>
+
             <p style={{ color: "#94a3b8", margin: 0 }}>
               XAU/USD · EMA 9/21/200 · RSI 14
             </p>
@@ -295,7 +344,10 @@ export default function Home() {
               fontSize: 13,
             }}
           >
-            <div style={{ color: "#22c55e" }}>● Sistemi aktiv ne faqe</div>
+            <div style={{ color: "#22c55e" }}>
+              ● Sistemi aktiv ne faqe
+            </div>
+
             <div style={{ color: "#94a3b8", marginTop: 6 }}>
               Rifreskim: cdo 60 sekonda
             </div>
@@ -319,7 +371,9 @@ export default function Home() {
               marginTop: 10,
             }}
           >
-            {signalLoading && !signal ? "Duke ngarkuar..." : signalName}
+            {signalLoading && !signal
+              ? "Duke ngarkuar..."
+              : signalName}
           </div>
 
           {signalError && (
@@ -335,7 +389,8 @@ export default function Home() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(130px, 1fr))",
               gap: 16,
               marginTop: 22,
             }}
@@ -352,14 +407,26 @@ export default function Home() {
             ].map((item) => (
               <div key={item.label}>
                 <div style={labelStyle}>{item.label}</div>
-                <div style={{ fontSize: 18, fontWeight: 700, marginTop: 7 }}>
+                <div
+                  style={{
+                    fontSize: 18,
+                    fontWeight: 700,
+                    marginTop: 7,
+                  }}
+                >
                   {displayValue(item.value)}
                 </div>
               </div>
             ))}
           </div>
 
-          <div style={{ color: "#64748b", fontSize: 12, marginTop: 18 }}>
+          <div
+            style={{
+              color: "#64748b",
+              fontSize: 12,
+              marginTop: 18,
+            }}
+          >
             Perditesuar: {lastSignalUpdate || "--"}
           </div>
 
@@ -383,7 +450,10 @@ export default function Home() {
               marginBottom: 14,
             }}
           >
-            <h2 style={{ fontSize: 22, margin: 0 }}>Backtest automatik</h2>
+            <h2 style={{ fontSize: 22, margin: 0 }}>
+              Backtest automatik
+            </h2>
+
             <button
               onClick={() => void refreshBacktest()}
               disabled={backtestLoading}
@@ -408,16 +478,14 @@ export default function Home() {
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(145px, 1fr))",
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(145px, 1fr))",
               gap: 12,
             }}
           >
             {[
               { label: "Tregtime", value: displayValue(tradeCount) },
-              {
-                label: "Win rate",
-                value: displayValue(winRate, "%"),
-              },
+              { label: "Win rate", value: displayValue(winRate, "%") },
               {
                 label: "Profit factor",
                 value: displayValue(profitFactor),
@@ -444,17 +512,33 @@ export default function Home() {
 
           <div style={{ ...panelStyle, marginTop: 14 }}>
             <div style={labelStyle}>Kapitali fillestar</div>
-            <div style={{ fontSize: 20, fontWeight: 700, marginTop: 7 }}>
+
+            <div
+              style={{
+                fontSize: 20,
+                fontWeight: 700,
+                marginTop: 7,
+              }}
+            >
               {displayValue(startingCapital)}
             </div>
-            <div style={{ color: "#64748b", fontSize: 12, marginTop: 12 }}>
+
+            <div
+              style={{
+                color: "#64748b",
+                fontSize: 12,
+                marginTop: 12,
+              }}
+            >
               Backtest-i i fundit: {lastBacktestUpdate || "--"}
             </div>
           </div>
         </section>
 
         <section style={panelStyle}>
-          <h2 style={{ fontSize: 21, marginTop: 0 }}>Tregtimet e fundit</h2>
+          <h2 style={{ fontSize: 21, marginTop: 0 }}>
+            Tregtimet e fundit
+          </h2>
 
           {trades.length === 0 ? (
             <p style={{ color: "#94a3b8" }}>
@@ -474,64 +558,144 @@ export default function Home() {
               >
                 <thead>
                   <tr style={{ color: "#94a3b8" }}>
-                    {["Drejtimi", "Hyrja", "Dalja", "Rezultati"].map(
-                      (heading) => (
-                        <th
-                          key={heading}
-                          style={{
-                            padding: "12px 10px",
-                            borderBottom: "1px solid #273449",
-                          }}
-                        >
-                          {heading}
-                        </th>
-                      )
-                    )}
+                    {[
+                      "Drejtimi",
+                      "Hyrja",
+                      "Ora e hyrjes",
+                      "Dalja",
+                      "Ora e daljes",
+                      "Rezultati",
+                      "Kthimi",
+                    ].map((heading) => (
+                      <th
+                        key={heading}
+                        style={{
+                          padding: "12px 10px",
+                          borderBottom: "1px solid #273449",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {heading}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
+
                 <tbody>
                   {trades.map((trade, index) => {
-                    const result = findValue(trade, [
+                    const rawResult = String(
+                      trade.result ?? ""
+                    ).toUpperCase();
+
+                    const numericResult = findValue(trade, [
                       "netReturnPct",
                       "netPct",
                       "pnlPct",
                       "pnl",
                       "profit",
-                      "result",
                     ]);
 
-                    const numericResult =
-                      typeof result === "number"
-                        ? result
-                        : typeof result === "string" &&
-                            result.trim() !== "" &&
-                            Number.isFinite(Number(result))
-                          ? Number(result)
+                    const resultNumber =
+                      typeof numericResult === "number"
+                        ? numericResult
+                        : typeof numericResult === "string" &&
+                            numericResult.trim() !== ""
+                          ? Number(numericResult)
                           : undefined;
 
+                    const isWin =
+                      rawResult === "WIN" ||
+                      (rawResult !== "LOSS" &&
+                        rawResult !== "LOSE" &&
+                        typeof resultNumber === "number" &&
+                        resultNumber > 0);
+
+                    const isLoss =
+                      rawResult === "LOSS" ||
+                      rawResult === "LOSE" ||
+                      (rawResult !== "WIN" &&
+                        typeof resultNumber === "number" &&
+                        resultNumber < 0);
+
+                    const resultLabel =
+                      rawResult === "BREAKEVEN" ||
+                      rawResult === "BREAK_EVEN"
+                        ? "BREAKEVEN"
+                        : isWin
+                          ? "WIN"
+                          : isLoss
+                            ? "LOSE"
+                            : rawResult || "--";
+
+                    const resultColor =
+                      resultLabel === "WIN"
+                        ? "#22c55e"
+                        : resultLabel === "LOSE"
+                          ? "#ef4444"
+                          : "#facc15";
+
+                    const returnText =
+                      typeof resultNumber === "number" &&
+                      Number.isFinite(resultNumber)
+                        ? `${resultNumber > 0 ? "+" : ""}${resultNumber.toFixed(2)}%`
+                        : "--";
+
                     return (
-                      <tr key={`${index}-${String(trade.entryPrice ?? trade.entry ?? "")}`}>
+                      <tr
+                        key={`${index}-${String(
+                          trade.entryTime ?? trade.entryPrice ?? trade.entry ?? ""
+                        )}`}
+                      >
                         <td style={cellStyle}>
                           {String(trade.side ?? "--").toUpperCase()}
                         </td>
+
                         <td style={cellStyle}>
-                          {displayValue(trade.entryPrice ?? trade.entry)}
+                          {displayValue(
+                            trade.entryPrice ?? trade.entry
+                          )}
                         </td>
+
                         <td style={cellStyle}>
-                          {displayValue(trade.exitPrice ?? trade.exit)}
+                          {displayTime(trade.entryTime)}
                         </td>
+
+                        <td style={cellStyle}>
+                          {displayValue(
+                            trade.exitPrice ?? trade.exit
+                          )}
+                        </td>
+
+                        <td style={cellStyle}>
+                          {displayTime(trade.exitTime)}
+                        </td>
+
+                        <td
+                          style={{
+                            ...cellStyle,
+                            color: resultColor,
+                            fontWeight: 800,
+                          }}
+                        >
+                          {resultLabel}
+                        </td>
+
                         <td
                           style={{
                             ...cellStyle,
                             color:
-                              numericResult === undefined
-                                ? "#f8fafc"
-                                : numericResult >= 0
-                                  ? "#22c55e"
-                                  : "#ef4444",
+                              typeof resultNumber === "number" &&
+                              resultNumber > 0
+                                ? "#22c55e"
+                                : typeof resultNumber === "number" &&
+                                    resultNumber < 0
+                                  ? "#ef4444"
+                                  : "#94a3b8",
+                            fontWeight: 700,
+                            whiteSpace: "nowrap",
                           }}
                         >
-                          {displayValue(numericResult ?? result, numericResult !== undefined ? "%" : "")}
+                          {returnText}
                         </td>
                       </tr>
                     );
@@ -559,4 +723,5 @@ const buttonStyle = {
 const cellStyle = {
   padding: "13px 10px",
   borderBottom: "1px solid #273449",
+  whiteSpace: "nowrap" as const,
 } as const;
