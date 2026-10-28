@@ -7,29 +7,21 @@ type Data = Record<string, any>;
 
 const formatNumber = (value: unknown, decimals = 2): string => {
   if (value === null || value === undefined || value === "") return "—";
-  const n = typeof value === "number" ? value : Number(String(value).replace(",", "."));
-  return Number.isFinite(n) ? n.toFixed(decimals) : "—";
+
+  const number =
+    typeof value === "number" ? value : Number(String(value).replace(",", "."));
+
+  return Number.isFinite(number) ? number.toFixed(decimals) : "—";
 };
 
-const formatPrice = (v: unknown) => formatNumber(v, 3);
-const formatRSI = (v: unknown) => formatNumber(v, 2);
+const first = (obj: Data | null, keys: string[]) => {
+  if (!obj) return undefined;
 
-const getNumber = (obj: Data | null, keys: string[]): number | null => {
-  if (!obj) return null;
   for (const key of keys) {
     const value = obj[key];
-    if (value === null || value === undefined || value === "") continue;
-    const n = typeof value === "number" ? value : Number(String(value).replace(",", "."));
-    if (Number.isFinite(n)) return n;
+    if (value !== undefined && value !== null && value !== "") return value;
   }
-  return null;
-};
 
-const getValue = (obj: Data | null, keys: string[]): any => {
-  if (!obj) return undefined;
-  for (const key of keys) {
-    if (obj[key] !== undefined && obj[key] !== null && obj[key] !== "") return obj[key];
-  }
   return undefined;
 };
 
@@ -73,9 +65,8 @@ const translations: Record<string, Record<string, string>> = {
     signal: "Sinjali aktual",
     price: "Cmimi aktual",
     rsi: "RSI",
-    ema9: "EMA 9",
-    ema21: "EMA 21",
-    ema200: "EMA 200",
+    emaFast: "EMA Fast",
+    emaSlow: "EMA Slow",
     performance: "Performanca",
     totalTrades: "Gjithsej tregtime",
     wins: "Fitore",
@@ -93,13 +84,6 @@ const translations: Record<string, Record<string, string>> = {
     error: "Nuk u moren te dhenat.",
     menu: "Menuja",
     close: "Mbyll",
-    buyScore: "BUY Score",
-    sellScore: "SELL Score",
-    scoreNote: "Vleresim teknik, jo probabilitet i garantuar fitimi",
-    macd: "MACD",
-    entryPrice: "Cmimi i hyrjes",
-    stopLoss: "Stop Loss",
-    takeProfit: "Take Profit",
   },
   en: {
     title: "KeliLelibot",
@@ -111,9 +95,8 @@ const translations: Record<string, Record<string, string>> = {
     signal: "Current signal",
     price: "Current price",
     rsi: "RSI",
-    ema9: "EMA 9",
-    ema21: "EMA 21",
-    ema200: "EMA 200",
+    emaFast: "EMA Fast",
+    emaSlow: "EMA Slow",
     performance: "Performance",
     totalTrades: "Total trades",
     wins: "Wins",
@@ -131,59 +114,11 @@ const translations: Record<string, Record<string, string>> = {
     error: "Could not load data.",
     menu: "Menu",
     close: "Close",
-    buyScore: "BUY Score",
-    sellScore: "SELL Score",
-    scoreNote: "Technical score, not a guaranteed win probability",
-    macd: "MACD",
-    entryPrice: "Entry price",
-    stopLoss: "Stop Loss",
-    takeProfit: "Take Profit",
   },
 };
 
-const t = (language: string, key: string) =>
+const getText = (language: string, key: string) =>
   translations[language]?.[key] ?? translations.en[key] ?? translations.sq[key] ?? key;
-
-function calculateScores(data: Data | null) {
-  const rsi = getNumber(data, ["rsi", "RSI", "rsi_value", "rsiValue"]);
-  const ema9 = getNumber(data, ["ema9", "ema_9"]);
-  const ema21 = getNumber(data, ["ema21", "ema_21"]);
-  const ema200 = getNumber(data, ["ema200", "ema_200"]);
-  const macd = getNumber(data, [
-    "macdHistogram", "macd_histogram", "histogram", "macd",
-    "MACD", "macd_value", "macdValue",
-  ]);
-
-  let buyPoints = 0;
-  let sellPoints = 0;
-  let weight = 0;
-
-  if (ema9 !== null && ema21 !== null) {
-    weight += 40;
-    if (ema9 > ema21) buyPoints += 40;
-    else if (ema9 < ema21) sellPoints += 40;
-    else { buyPoints += 20; sellPoints += 20; }
-  }
-
-  if (rsi !== null) {
-    weight += 30;
-    if (rsi > 55 && rsi < 70) buyPoints += 30;
-    else if (rsi < 45 && rsi > 30) sellPoints += 30;
-    else { buyPoints += 15; sellPoints += 15; }
-  }
-
-  if (macd !== null) {
-    weight += 30;
-    if (macd > 0) buyPoints += 30;
-    else if (macd < 0) sellPoints += 30;
-    else { buyPoints += 15; sellPoints += 15; }
-  }
-
-  if (!weight) return { buy: 0, sell: 0, hasData: false, rsi, ema9, ema21, ema200, macd };
-
-  const buy = Math.round((buyPoints / weight) * 100);
-  return { buy, sell: 100 - buy, hasData: true, rsi, ema9, ema21, ema200, macd };
-}
 
 function Metric({
   label,
@@ -212,15 +147,18 @@ export default function Home() {
   const [timezone, setTimezone] = useState("Europe/Athens");
   const [lastUpdated, setLastUpdated] = useState("");
 
-  const text = (key: string) => t(language, key);
+  const t = (key: string) => getText(language, key);
 
   useEffect(() => {
     try {
-      const l = localStorage.getItem("kelilelibot-language");
-      const z = localStorage.getItem("kelilelibot-timezone");
-      if (l) setLanguage(l);
-      if (z) setTimezone(z);
-    } catch {}
+      const savedLanguage = localStorage.getItem("kelilelibot-language");
+      const savedTimezone = localStorage.getItem("kelilelibot-timezone");
+
+      if (savedLanguage) setLanguage(savedLanguage);
+      if (savedTimezone) setTimezone(savedTimezone);
+    } catch {
+      // Local storage may be unavailable.
+    }
   }, []);
 
   const loadData = useCallback(async () => {
@@ -228,19 +166,25 @@ export default function Home() {
     setError("");
 
     try {
-      const [signalResponse, backtestResponse] = await Promise.all([
+      const [signalsResponse, backtestResponse] = await Promise.all([
         fetch("/api/signals", { cache: "no-store" }),
         fetch("/api/backtest", { cache: "no-store" }),
       ]);
 
-      if (!signalResponse.ok) throw new Error(`Signals API: ${signalResponse.status}`);
+      if (!signalsResponse.ok) {
+        throw new Error(`Signals API: ${signalsResponse.status}`);
+      }
 
-      const signalData = await signalResponse.json();
-      let backtestData: Data | null = null;
+      if (!backtestResponse.ok) {
+        throw new Error(`Backtest API: ${backtestResponse.status}`);
+      }
 
-      if (backtestResponse.ok) backtestData = await backtestResponse.json();
+      const [signalsData, backtestData] = await Promise.all([
+        signalsResponse.json(),
+        backtestResponse.json(),
+      ]);
 
-      setSignals(signalData);
+      setSignals(signalsData);
       setBacktest(backtestData);
       setLastUpdated(
         new Intl.DateTimeFormat(language, {
@@ -250,489 +194,230 @@ export default function Home() {
           timeZone: timezone,
         }).format(new Date())
       );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : text("error"));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("error"));
     } finally {
       setLoading(false);
     }
   }, [language, timezone]);
 
   useEffect(() => {
-    void loadData();
-    const interval = setInterval(() => void loadData(), 60_000);
+    loadData();
+    const interval = setInterval(loadData, 60_000);
     return () => clearInterval(interval);
   }, [loadData]);
 
   const changeLanguage = (value: string) => {
     setLanguage(value);
-    try { localStorage.setItem("kelilelibot-language", value); } catch {}
+    try {
+      localStorage.setItem("kelilelibot-language", value);
+    } catch {}
   };
 
   const changeTimezone = (value: string) => {
     setTimezone(value);
-    try { localStorage.setItem("kelilelibot-timezone", value); } catch {}
+    try {
+      localStorage.setItem("kelilelibot-timezone", value);
+    } catch {}
   };
 
-  const scores = calculateScores(signals);
   const signalValue = String(
-    getValue(signals, ["signal", "action", "recommendation", "type"]) ?? "WAIT"
+    first(signals, ["signal", "action", "recommendation", "type"]) ?? "—"
   ).toUpperCase();
 
-  const signalClass = signalValue.includes("BUY")
-    ? "signal-buy"
-    : signalValue.includes("SELL")
-      ? "signal-sell"
-      : "signal-neutral";
+  const price = formatNumber(
+    first(signals, ["price", "currentPrice", "close", "lastPrice", "current_price"])
+  );
 
-  const price = formatPrice(getNumber(signals, [
-    "price", "currentPrice", "close", "lastPrice", "current_price",
-  ]));
+  const rsi = formatNumber(
+    first(signals, ["rsi", "RSI", "rsi_value", "rsiValue"])
+  );
 
-  const entryPrice = formatPrice(getNumber(signals, ["entryPrice", "entry_price", "entry", "price"]));
-  const stopLoss = formatPrice(getNumber(signals, ["stopLoss", "stop_loss", "sl"]));
-  const takeProfit = formatPrice(getNumber(signals, ["takeProfit", "take_profit", "tp"]));
+  const emaFast = formatNumber(
+    first(signals, [
+      "emaFast",
+      "ema_fast",
+      "ema_ fast",
+      "fastEMA",
+      "ema9",
+      "ema_9",
+      "ema_20",
+      "ema20",
+    ])
+  );
 
-  const tradesValue = getValue(backtest, ["trades", "results", "history"]);
+  const emaSlow = formatNumber(
+    first(signals, [
+      "emaSlow",
+      "ema_slow",
+      "slowEMA",
+      "ema50",
+      "ema_50",
+      "ema_200",
+      "ema200",
+    ])
+  );
+
+  const tradesValue = first(backtest, ["trades", "results", "history"]);
   const trades: Data[] = Array.isArray(tradesValue) ? tradesValue : [];
 
   const totalTrades = formatNumber(
-    getValue(backtest, ["totalTrades", "total_trades", "total", "tradesCount"]) ?? trades.length,
+    first(backtest, ["totalTrades", "total_trades", "total", "tradesCount"]) ??
+      trades.length,
     0
   );
 
   const wins = formatNumber(
-    getValue(backtest, ["wins", "winningTrades", "winning_trades"]) ??
+    first(backtest, ["wins", "winningTrades", "winning_trades"]) ??
       trades.filter((trade) =>
-        String(getValue(trade, ["result", "status", "outcome"]) ?? "").toLowerCase().includes("win")
+        String(first(trade, ["result", "status", "outcome"]) ?? "").toLowerCase().includes("win")
       ).length,
     0
   );
 
   const losses = formatNumber(
-    getValue(backtest, ["losses", "losingTrades", "losing_trades"]) ??
+    first(backtest, ["losses", "losingTrades", "losing_trades"]) ??
       trades.filter((trade) =>
-        String(getValue(trade, ["result", "status", "outcome"]) ?? "").toLowerCase().includes("loss")
+        String(first(trade, ["result", "status", "outcome"]) ?? "").toLowerCase().includes("loss")
       ).length,
     0
   );
 
-  const winRate = formatNumber(getNumber(backtest, ["winRate", "win_rate", "winrate", "winRatePercent"]));
-  const profit = formatNumber(getNumber(backtest, ["profit", "netProfit", "net_profit", "totalProfit", "pnl"]));
+  const winRate = formatNumber(
+    first(backtest, ["winRate", "win_rate", "winrate", "winRatePercent"])
+  );
+
+  const profit = formatNumber(
+    first(backtest, ["profit", "netProfit", "net_profit", "totalProfit", "pnl"])
+  );
 
   return (
     <main className="app-shell">
       <style jsx global>{`
         * { box-sizing: border-box; }
-
-        html, body {
+        body {
           margin: 0;
-          padding: 0;
-          width: 100%;
-          max-width: 100%;
-          min-height: 100%;
-          overflow-x: hidden;
           background: #08090c;
           color: #f4f4f5;
           font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
-
         button, select { font: inherit; }
-
         .app-shell {
-          width: 100%;
-          max-width: 100%;
           min-height: 100vh;
-          padding: 16px;
-          overflow-x: hidden;
+          padding: 24px;
           background:
-            radial-gradient(ellipse at top right, rgba(194,146,45,.11), transparent 35%),
+            radial-gradient(ellipse at top right, rgba(194, 146, 45, .11), transparent 35%),
             #08090c;
         }
-
-        .container {
-          width: 100%;
-          max-width: 1600px;
-          min-width: 0;
-          margin: 0 auto;
-        }
-
+        .container { max-width: 1200px; margin: 0 auto; }
         .topbar {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 12px;
-          margin-bottom: 18px;
-          min-width: 0;
+          display: flex; align-items: center; justify-content: space-between;
+          gap: 16px; margin-bottom: 28px;
         }
-
-        .brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
-
+        .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
         .brand-mark {
-          width: 42px;
-          height: 42px;
-          flex-shrink: 0;
-          border: 1px solid #9f792d;
-          border-radius: 12px;
-          display: grid;
-          place-items: center;
-          color: #e8bd59;
-          font-weight: 900;
-          background: #17130a;
+          width: 43px; height: 43px; border: 1px solid #9f792d;
+          border-radius: 13px; display: grid; place-items: center;
+          color: #e8bd59; font-weight: 900; background: #17130a;
         }
-
-        .brand-title { margin: 0; font-size: 21px; font-weight: 800; }
+        .brand-title { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: .2px; }
         .subtitle { color: #888b95; font-size: 12px; margin-top: 4px; }
-
-        .top-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
-
+        .top-actions { display: flex; align-items: center; gap: 10px; }
         .live-pill {
-          display: flex;
-          align-items: center;
-          gap: 7px;
-          color: #7ee0a4;
-          border: 1px solid #235b3b;
-          background: #102218;
-          padding: 8px 10px;
-          border-radius: 999px;
-          font-size: 11px;
-          font-weight: 800;
+          display: flex; align-items: center; gap: 7px; color: #7ee0a4;
+          border: 1px solid #235b3b; background: #102218; padding: 8px 11px;
+          border-radius: 999px; font-size: 11px; font-weight: 800;
         }
-
         .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #4cdb82; }
-
         .icon-button {
-          width: 38px;
-          height: 38px;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          gap: 4px;
-          border: 1px solid #33343b;
-          border-radius: 10px;
-          background: #14151a;
-          color: #f4f4f5;
-          cursor: pointer;
-          padding: 0;
+          position: relative; width: 38px; height: 38px; display: flex;
+          flex-direction: column; align-items: center; justify-content: center;
+          gap: 4px; border: 1px solid #33343b; border-radius: 10px;
+          background: #14151a; color: #f4f4f5; cursor: pointer; padding: 0;
         }
-
         .hamb-line { height: 2px; background: #e8bd59; border-radius: 3px; display: block; }
         .hamb-line:nth-child(1), .hamb-line:nth-child(3) { width: 16px; }
         .hamb-line:nth-child(2) { width: 11px; }
-
         .close-mark { position: relative; width: 17px; height: 17px; display: block; }
         .close-mark::before, .close-mark::after {
-          content: "";
-          position: absolute;
-          left: 7.75px;
-          top: 0;
-          height: 17px;
-          width: 1.5px;
-          background: #e8bd59;
-          border-radius: 2px;
+          content: ""; position: absolute; left: 7.75px; top: 0;
+          height: 17px; width: 1.5px; background: #e8bd59; border-radius: 2px;
         }
         .close-mark::before { transform: rotate(45deg); }
         .close-mark::after { transform: rotate(-45deg); }
-
         .panel {
-          width: 100%;
-          min-width: 0;
-          border: 1px solid #282930;
-          border-radius: 15px;
-          padding: 16px;
+          border: 1px solid #282930; border-radius: 17px; padding: 20px;
           background: linear-gradient(145deg, rgba(22,23,28,.96), rgba(13,14,18,.98));
           box-shadow: 0 10px 35px rgba(0,0,0,.12);
         }
-
         .panel-heading {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 10px;
-          margin-bottom: 14px;
-          min-width: 0;
+          display: flex; align-items: center; justify-content: space-between;
+          gap: 12px; margin-bottom: 18px;
         }
-
         .panel-title { margin: 0; font-size: 15px; font-weight: 750; }
         .gold-text { color: #e8bd59 !important; }
-
-        /* Sinjalet: perdorim gjithe gjeresine dhe 5 kolona ne ekran te madh */
-        .metrics-grid {
-          display: grid;
-          grid-template-columns: repeat(5, minmax(0, 1fr));
-          gap: 10px;
-          min-width: 0;
-        }
-
+        .metrics-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
         .metric {
-          min-width: 0;
-          padding: 12px;
-          border: 1px solid #292a31;
-          border-radius: 11px;
-          background: rgba(255,255,255,.018);
+          padding: 17px; border: 1px solid #292a31; border-radius: 13px;
+          background: rgba(255,255,255,.018); min-width: 0;
         }
-
-        .metric-label {
-          color: #92939c;
-          font-size: 11px;
-          margin-bottom: 7px;
-          line-height: 1.35;
-          overflow-wrap: anywhere;
-        }
-
+        .metric-label { color: #92939c; font-size: 12px; margin-bottom: 10px; }
         .metric-value {
-          color: #f3f3f5;
-          font-size: clamp(15px, 1.4vw, 22px);
-          font-weight: 800;
-          overflow-wrap: anywhere;
-          word-break: break-word;
-          font-variant-numeric: tabular-nums;
+          color: #f3f3f5; font-size: clamp(18px, 2.4vw, 25px);
+          font-weight: 800; overflow-wrap: anywhere; font-variant-numeric: tabular-nums;
         }
-
-        .signal-value { font-size: 23px; letter-spacing: .3px; }
-        .signal-buy, .positive { color: #54dc94 !important; }
-        .signal-sell, .negative { color: #ff6e78 !important; }
+        .signal-value { font-size: 25px; letter-spacing: .4px; }
+        .signal-buy { color: #54dc94 !important; }
+        .signal-sell { color: #ff6e78 !important; }
         .signal-neutral { color: #e8bd59 !important; }
-
-        .score-grid {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 10px;
-          margin-top: 10px;
-          min-width: 0;
-        }
-
-        .score-card {
-          min-width: 0;
-          padding: 13px;
-          border-radius: 11px;
-          border: 1px solid #292a31;
-          background: #101116;
-        }
-
-        .score-top {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 8px;
-          margin-bottom: 10px;
-        }
-
-        .score-name { font-size: 12px; font-weight: 750; }
-        .score-number { font-size: 22px; font-weight: 850; font-variant-numeric: tabular-nums; }
-        .buy-color { color: #54dc94; }
-        .sell-color { color: #ff6e78; }
-
-        .bar-track { width: 100%; height: 7px; border-radius: 999px; overflow: hidden; background: #282930; }
-        .bar-fill { height: 100%; border-radius: 999px; transition: width .35s ease; }
-        .buy-fill { background: #39c981; }
-        .sell-fill { background: #f05d6c; }
-
-        .score-note { color: #888b95; font-size: 11px; margin-top: 10px; line-height: 1.5; }
-
-        /* Dy panelet poshte: me afer, me te ngjeshura dhe me pak hapesire te zeze */
-        .section-grid {
-          display: grid;
-          grid-template-columns: minmax(0, .78fr) minmax(0, 1.22fr);
-          gap: 10px;
-          margin: 10px 0 0;
-          width: 100%;
-          max-width: 100%;
-          min-width: 0;
-          align-items: start;
-        }
-
-        .section-grid > .panel {
-          width: 100%;
-          max-width: 100%;
-          min-width: 0;
-          padding: 13px;
-          overflow: hidden;
-        }
-
-        .stats-grid {
-          display: grid;
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-          gap: 7px;
-          min-width: 0;
-          width: 100%;
-        }
-
-        .section-grid .metric { min-width: 0; padding: 10px 8px; }
-        .section-grid .metric-label { font-size: 10px; margin-bottom: 6px; }
-        .section-grid .metric-value { font-size: clamp(13px, 1.1vw, 18px); }
-
-        .table-wrap {
-          display: block;
-          width: 100%;
-          max-width: 100%;
-          min-width: 0;
-          overflow-x: auto;
-          overscroll-behavior-x: contain;
-          -webkit-overflow-scrolling: touch;
-        }
-
-        table { width: 100%; border-collapse: collapse; min-width: 500px; }
-        th, td {
-          padding: 10px 8px;
-          border-bottom: 1px solid #292a31;
-          text-align: left;
-          font-size: 11px;
-          white-space: nowrap;
-        }
+        .section-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; margin: 18px 0; }
+        .stats-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 560px; }
+        th, td { padding: 13px 12px; border-bottom: 1px solid #292a31; text-align: left; font-size: 12px; white-space: nowrap; }
         th { color: #92939c; font-weight: 650; }
         td { color: #e4e4e7; }
-
+        .positive { color: #54dc94 !important; }
+        .negative { color: #ff6e78 !important; }
         .muted { color: #888b95; font-size: 12px; }
-
         .refresh-button {
-          flex-shrink: 0;
-          border: 1px solid #795c24;
-          color: #e8bd59;
-          background: #211a0d;
-          padding: 8px 11px;
-          border-radius: 9px;
-          cursor: pointer;
-          font-size: 12px;
+          border: 1px solid #795c24; color: #e8bd59; background: #211a0d;
+          padding: 9px 12px; border-radius: 9px; cursor: pointer; font-size: 12px;
         }
-
-        .refresh-button:disabled { opacity: .6; cursor: wait; }
-
         .menu-backdrop {
-          position: fixed;
-          inset: 0;
-          z-index: 20;
-          background: rgba(0,0,0,.55);
-          display: flex;
-          justify-content: flex-end;
+          position: fixed; inset: 0; z-index: 20; background: rgba(0,0,0,.55);
+          display: flex; justify-content: flex-end;
         }
-
         .menu-panel {
-          width: min(340px, 88vw);
-          height: 100%;
-          padding: 22px;
-          background: #111217;
-          border-left: 1px solid #383027;
+          width: min(340px, 88vw); height: 100%; padding: 22px;
+          background: #111217; border-left: 1px solid #383027;
           box-shadow: -20px 0 60px rgba(0,0,0,.35);
         }
-
         .menu-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 26px; }
         .menu-title { font-size: 17px; font-weight: 800; }
-
         .menu-close {
-          width: 30px;
-          height: 30px;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          border: 1px solid #393a42;
-          border-radius: 8px;
-          background: #1c1d23;
-          color: #e8bd59;
-          font-size: 23px;
-          line-height: 1;
-          padding: 0;
-          cursor: pointer;
+          width: 30px; height: 30px; display: flex; align-items: center;
+          justify-content: center; border: 1px solid #393a42; border-radius: 8px;
+          background: #1c1d23; color: #e8bd59; font-size: 23px; line-height: 1;
+          padding: 0; cursor: pointer; transform: translateY(-1px);
         }
-
         .field-label { display: block; color: #a1a1aa; font-size: 12px; margin: 18px 0 8px; }
-
         .select-field {
-          width: 100%;
-          max-width: 100%;
-          padding: 12px;
-          color: #f4f4f5;
-          background: #1a1b21;
-          border: 1px solid #373840;
-          border-radius: 9px;
-          outline: none;
+          width: 100%; padding: 12px; color: #f4f4f5; background: #1a1b21;
+          border: 1px solid #373840; border-radius: 9px; outline: none;
         }
-
-        .error-message {
-          color: #ff8d94;
-          background: #2a1418;
-          border: 1px solid #5b292f;
-          border-radius: 10px;
-          padding: 12px;
-          font-size: 12px;
-          margin-bottom: 14px;
-          overflow-wrap: anywhere;
-        }
-
-        /* Laptop/tablet */
-        @media (max-width: 1000px) {
-          .app-shell { padding: 12px; }
-          .metrics-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
-          .section-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); }
-        }
-
-        /* Telefon */
-        @media (max-width: 650px) {
-          .app-shell { padding: 8px; }
-          .container { width: 100%; max-width: 100%; }
-          .topbar { gap: 6px; margin-bottom: 12px; }
-          .brand { gap: 8px; }
-          .brand-mark { width: 35px; height: 35px; border-radius: 10px; }
-          .brand-title { font-size: 17px; }
-          .subtitle { max-width: 170px; font-size: 10px; line-height: 1.3; }
-          .top-actions { gap: 6px; }
-          .live-pill { padding: 6px 7px; font-size: 9px; gap: 5px; }
-          .icon-button { width: 34px; height: 34px; }
-
-          .panel { padding: 10px; border-radius: 12px; }
-          .panel-heading { gap: 6px; margin-bottom: 10px; }
-          .panel-title { font-size: 13px; }
-          .refresh-button { padding: 7px 8px; font-size: 10px; }
-
-          /* Kartat shfrytezojne ekranin pa lene kolona boshe */
-          .metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
-          .metric { padding: 10px; border-radius: 9px; }
-          .metric-label { font-size: 10px; margin-bottom: 5px; }
-          .metric-value { font-size: 16px; }
-          .signal-value { font-size: 20px; }
-
-          .score-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 6px; }
-          .score-card { padding: 9px; }
-          .score-name { font-size: 10px; }
-          .score-number { font-size: 18px; }
-          .score-note { font-size: 10px; margin-top: 8px; }
-
-          /* Ne telefon: performanca dhe tregtimet jane ne nje kolone, pa hapje anash */
-          .section-grid {
-            grid-template-columns: minmax(0, 1fr);
-            gap: 8px;
-            margin-top: 8px;
-          }
-
-          .section-grid > .panel {
-            width: 100%;
-            max-width: 100%;
-            min-width: 0;
-            padding: 10px;
-            margin: 0;
-          }
-
-          .stats-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
-          .section-grid .metric { padding: 8px 5px; }
-          .section-grid .metric-label { font-size: 9px; line-height: 1.25; }
-          .section-grid .metric-value { font-size: clamp(12px, 3.5vw, 15px); }
-
-          .table-wrap { width: 100%; max-width: 100%; overflow-x: auto; }
-          table { min-width: 480px; }
-          th, td { padding: 9px 7px; font-size: 10px; }
-          .menu-panel { width: min(340px, 90vw); }
-        }
-
-        @media (max-width: 370px) {
-          .app-shell { padding: 6px; }
-          .brand-title { font-size: 15px; }
-          .subtitle { max-width: 135px; font-size: 9px; }
-          .metrics-grid { gap: 5px; }
-          .metric { padding: 8px; }
-          .metric-value { font-size: 14px; }
-          .section-grid .metric { padding: 7px 4px; }
-          .section-grid .metric-label { font-size: 8px; }
-          .section-grid .metric-value { font-size: 11px; }
+        .error-message { color: #ff8d94; background: #2a1418; border: 1px solid #5b292f; border-radius: 10px; padding: 12px; font-size: 12px; margin-bottom: 18px; overflow-wrap: anywhere; }
+        @media (max-width: 760px) {
+          .app-shell { padding: 15px; }
+          .topbar { align-items: flex-start; }
+          .subtitle { max-width: 200px; line-height: 1.4; }
+          .live-pill { padding: 7px 9px; }
+          .metrics-grid { grid-template-columns: repeat(2, minmax(0,1fr)); gap: 10px; }
+          .section-grid { grid-template-columns: 1fr; }
+          .panel { padding: 15px; }
+          .stats-grid { gap: 8px; }
+          .metric { padding: 14px; }
+          .metric-value { font-size: 21px; }
         }
       `}</style>
 
@@ -741,19 +426,16 @@ export default function Home() {
           <div className="brand">
             <div className="brand-mark">K</div>
             <div>
-              <h1 className="brand-title">{text("title")}</h1>
-              <div className="subtitle">{text("subtitle")}</div>
+              <h1 className="brand-title">{t("title")}</h1>
+              <div className="subtitle">{t("subtitle")}</div>
             </div>
           </div>
 
           <div className="top-actions">
-            <div className="live-pill">
-              <span className="live-dot" />
-              {text("live")}
-            </div>
+            <div className="live-pill"><span className="live-dot" />{t("live")}</div>
             <button
               className="icon-button"
-              aria-label={menuOpen ? text("close") : text("menu")}
+              aria-label={menuOpen ? t("close") : t("menu")}
               onClick={() => setMenuOpen((open) => !open)}
             >
               {menuOpen ? (
@@ -769,165 +451,87 @@ export default function Home() {
           </div>
         </header>
 
-        {error && (
-          <div className="error-message">
-            {text("error")} {error}
-          </div>
-        )}
+        {error && <div className="error-message">{t("error")} {error}</div>}
 
         <section className="panel">
           <div className="panel-heading">
-            <h2 className="panel-title">{text("signal")}</h2>
-            <button
-              className="refresh-button"
-              onClick={() => void loadData()}
-              disabled={loading}
-            >
-              {loading ? text("loading") : text("refresh")}
+            <h2 className="panel-title">{t("signal")}</h2>
+            <button className="refresh-button" onClick={loadData} disabled={loading}>
+              {loading ? t("loading") : t("refresh")}
             </button>
           </div>
 
           <div className="metrics-grid">
-            <div className="metric">
-              <div className="metric-label">{text("signal")}</div>
-              <div className={`metric-value signal-value ${signalClass}`}>
-                {signalValue}
-              </div>
-            </div>
-            <Metric label={text("price")} value={price} />
-            <Metric label={text("rsi")} value={formatRSI(scores.rsi)} />
-            <Metric label={text("ema9")} value={formatPrice(scores.ema9)} />
-            <Metric label={text("ema21")} value={formatPrice(scores.ema21)} />
-            <Metric label={text("ema200")} value={formatPrice(scores.ema200)} />
-            <Metric label={text("macd")} value={formatNumber(scores.macd, 4)} />
-            <Metric label={text("entryPrice")} value={entryPrice} />
-            <Metric label={text("stopLoss")} value={stopLoss} />
-            <Metric label={text("takeProfit")} value={takeProfit} />
+            <Metric
+              label={t("signal")}
+              value={signalValue}
+              accent
+            />
+            <Metric label={t("price")} value={price} />
+            <Metric label={t("rsi")} value={rsi} />
+            <Metric label={t("emaFast")} value={emaFast} />
           </div>
-
-          <div className="score-grid">
-            <div className="score-card">
-              <div className="score-top">
-                <span className="score-name buy-color">{text("buyScore")}</span>
-                <span className="score-number buy-color">
-                  {scores.hasData ? `${scores.buy}%` : "—"}
-                </span>
-              </div>
-              <div className="bar-track">
-                <div
-                  className="bar-fill buy-fill"
-                  style={{ width: `${scores.hasData ? scores.buy : 0}%` }}
-                />
-              </div>
-            </div>
-
-            <div className="score-card">
-              <div className="score-top">
-                <span className="score-name sell-color">{text("sellScore")}</span>
-                <span className="score-number sell-color">
-                  {scores.hasData ? `${scores.sell}%` : "—"}
-                </span>
-              </div>
-              <div className="bar-track">
-                <div
-                  className="bar-fill sell-fill"
-                  style={{ width: `${scores.hasData ? scores.sell : 0}%` }}
-                />
-              </div>
-            </div>
+          <div style={{ height: 12 }} />
+          <div className="metrics-grid">
+            <Metric label={t("emaSlow")} value={emaSlow} />
+            <Metric label={t("rsi")} value={rsi} />
+            <Metric label={t("emaFast")} value={emaFast} />
+            <Metric label={t("emaSlow")} value={emaSlow} />
           </div>
-
-          <div className="score-note">
-            {!scores.hasData
-              ? "Nuk u gjeten te dhenat e nevojshme per score."
-              : text("scoreNote")}
-          </div>
-
-          <div className="muted" style={{ marginTop: 10 }}>
-            {lastUpdated ? `${text("refresh")}: ${lastUpdated}` : ""}
+          <div className="muted" style={{ marginTop: 15 }}>
+            {lastUpdated ? `${t("refresh")}: ${lastUpdated}` : ""}
           </div>
         </section>
 
         <section className="section-grid">
           <div className="panel">
             <div className="panel-heading">
-              <h2 className="panel-title">{text("performance")}</h2>
+              <h2 className="panel-title">{t("performance")}</h2>
             </div>
-
             <div className="stats-grid">
-              <Metric label={text("totalTrades")} value={totalTrades} />
-              <Metric label={text("wins")} value={wins} />
-              <Metric label={text("losses")} value={losses} />
+              <Metric label={t("totalTrades")} value={totalTrades} />
+              <Metric label={t("wins")} value={wins} />
+              <Metric label={t("losses")} value={losses} />
             </div>
-
-            <div style={{ height: 8 }} />
-
+            <div style={{ height: 12 }} />
             <div className="stats-grid">
-              <Metric
-                label={text("winRate")}
-                value={`${winRate}${winRate !== "—" ? "%" : ""}`}
-                accent
-              />
-              <Metric label={text("profit")} value={profit} accent />
-              <Metric label={text("price")} value={price} />
+              <Metric label={t("winRate")} value={`${winRate}${winRate !== "—" ? "%" : ""}`} accent />
+              <Metric label={t("profit")} value={profit} accent />
+              <Metric label={t("price")} value={price} />
             </div>
           </div>
 
           <div className="panel">
             <div className="panel-heading">
-              <h2 className="panel-title">{text("recentTrades")}</h2>
+              <h2 className="panel-title">{t("recentTrades")}</h2>
             </div>
-
             {trades.length === 0 ? (
-              <div className="muted">
-                {loading ? text("loading") : text("noTrades")}
-              </div>
+              <div className="muted">{loading ? t("loading") : t("noTrades")}</div>
             ) : (
               <div className="table-wrap">
                 <table>
                   <thead>
                     <tr>
-                      <th>{text("date")}</th>
-                      <th>{text("type")}</th>
-                      <th>{text("entry")}</th>
-                      <th>{text("exit")}</th>
-                      <th>{text("result")}</th>
+                      <th>{t("date")}</th>
+                      <th>{t("type")}</th>
+                      <th>{t("entry")}</th>
+                      <th>{t("exit")}</th>
+                      <th>{t("result")}</th>
                     </tr>
                   </thead>
                   <tbody>
                     {trades.slice(0, 10).map((trade, index) => {
-                      const result = getValue(trade, [
-                        "result", "profit", "pnl", "status", "outcome",
-                      ]);
+                      const result = first(trade, ["result", "profit", "pnl", "status", "outcome"]);
                       const resultText = String(result ?? "—");
-                      const lower = resultText.toLowerCase();
-                      const positive = Number(result) > 0 || lower.includes("win");
-                      const negative = Number(result) < 0 || lower.includes("loss");
+                      const positive = Number(result) > 0 || resultText.toLowerCase().includes("win");
+                      const negative = Number(result) < 0 || resultText.toLowerCase().includes("loss");
 
                       return (
-                        <tr
-                          key={String(getValue(trade, ["id", "ticket", "time"]) ?? index)}
-                        >
-                          <td>
-                            {String(getValue(trade, [
-                              "date", "time", "timestamp", "openedAt",
-                            ]) ?? "—")}
-                          </td>
-                          <td>
-                            {String(getValue(trade, [
-                              "type", "side", "direction", "signal",
-                            ]) ?? "—")}
-                          </td>
-                          <td>
-                            {formatPrice(getNumber(trade, [
-                              "entry", "entryPrice", "entry_price",
-                            ]))}
-                          </td>
-                          <td>
-                            {formatPrice(getNumber(trade, [
-                              "exit", "exitPrice", "exit_price",
-                            ]))}
-                          </td>
+                        <tr key={String(first(trade, ["id", "ticket", "time"]) ?? index)}>
+                          <td>{String(first(trade, ["date", "time", "timestamp", "openedAt"]) ?? "—")}</td>
+                          <td>{String(first(trade, ["type", "side", "direction", "signal"]) ?? "—")}</td>
+                          <td>{formatNumber(first(trade, ["entry", "entryPrice", "entry_price"]))}</td>
+                          <td>{formatNumber(first(trade, ["exit", "exitPrice", "exit_price"]))}</td>
                           <td className={positive ? "positive" : negative ? "negative" : ""}>
                             {typeof result === "number" ? formatNumber(result) : resultText}
                           </td>
@@ -946,39 +550,35 @@ export default function Home() {
         <div className="menu-backdrop" onClick={() => setMenuOpen(false)}>
           <aside className="menu-panel" onClick={(event) => event.stopPropagation()}>
             <div className="menu-header">
-              <div className="menu-title">{text("menu")}</div>
+              <div className="menu-title">{t("menu")}</div>
               <button
                 className="menu-close"
-                aria-label={text("close")}
+                aria-label={t("close")}
                 onClick={() => setMenuOpen(false)}
               >
                 ×
               </button>
             </div>
 
-            <label className="field-label">{text("language")}</label>
+            <label className="field-label">{t("language")}</label>
             <select
               className="select-field"
               value={language}
               onChange={(event) => changeLanguage(event.target.value)}
             >
               {languages.map((item) => (
-                <option key={item.code} value={item.code}>
-                  {item.label}
-                </option>
+                <option key={item.code} value={item.code}>{item.label}</option>
               ))}
             </select>
 
-            <label className="field-label">{text("timezone")}</label>
+            <label className="field-label">{t("timezone")}</label>
             <select
               className="select-field"
               value={timezone}
               onChange={(event) => changeTimezone(event.target.value)}
             >
               {timeZones.map((item) => (
-                <option key={item.value} value={item.value}>
-                  {item.label}
-                </option>
+                <option key={item.value} value={item.value}>{item.label}</option>
               ))}
             </select>
 
@@ -987,10 +587,10 @@ export default function Home() {
               style={{ width: "100%", marginTop: 24 }}
               onClick={() => {
                 setMenuOpen(false);
-                void loadData();
+                loadData();
               }}
             >
-              {text("refresh")}
+              {t("refresh")}
             </button>
           </aside>
         </div>
