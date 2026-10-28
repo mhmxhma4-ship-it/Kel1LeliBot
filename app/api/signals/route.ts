@@ -5,18 +5,12 @@ import { analyzeCandles, parseCandles } from "@/lib/strategy";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-type CandleData = {
-  datetime: string;
-  close: number;
-};
-
 function calculateLatestEMA(
   values: number[],
   period: number
 ): number | null {
   if (values.length < period) return null;
 
-  // Fillimi llogaritet me mesataren e thjeshte te periudhes.
   let ema =
     values.slice(0, period).reduce((sum, value) => sum + value, 0) /
     period;
@@ -28,6 +22,11 @@ function calculateLatestEMA(
   }
 
   return Number.isFinite(ema) ? ema : null;
+}
+
+function roundToTwo(value: number | null): number | null {
+  if (value === null || !Number.isFinite(value)) return null;
+  return Number(value.toFixed(2));
 }
 
 export async function GET() {
@@ -94,7 +93,8 @@ export async function GET() {
     if (closes.length < 220) {
       return NextResponse.json(
         {
-          error: "Nuk ka mjaft cmime te vlefshme per llogaritjen e EMA-ve.",
+          error:
+            "Nuk ka mjaft cmime te vlefshme per llogaritjen e EMA-ve.",
           candlesReceived: closes.length,
         },
         { status: 422 }
@@ -118,12 +118,9 @@ export async function GET() {
       {
         symbol: "XAU/USD",
         ...result,
-
-        // Kthehen si numra ne nivelin kryesor te JSON-it.
-        ema9,
-        ema21,
-        ema200,
-
+        ema9: roundToTwo(ema9),
+        ema21: roundToTwo(ema21),
+        ema200: roundToTwo(ema200),
         candlesReceived: closes.length,
         interval: "5min",
         updatedAt: new Date().toISOString(),
