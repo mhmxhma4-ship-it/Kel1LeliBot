@@ -833,17 +833,73 @@ export default function Home() {
           }}
         >
                     <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <img
-              src="/kelilelibot-logo.png"
-              alt="KeliLelibot"
-              style={{
-                width: 58,
-                height: 58,
-                objectFit: "contain",
-                flexShrink: 0,
-                filter: "drop-shadow(0 0 10px rgba(57,255,136,0.3))",
-              }}
-            />
+            
+<svg
+  width="58"
+  height="58"
+  viewBox="0 0 100 100"
+  fill="none"
+  xmlns="http://www.w3.org/2000/svg"
+  style={{
+    flexShrink: 0,
+    filter: "drop-shadow(0 0 9px rgba(57,255,136,0.45))",
+  }}
+>
+  <defs>
+    <linearGradient id="kl-neon" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stopColor="#7DFFAD" />
+      <stop offset="100%" stopColor="#39FF88" />
+    </linearGradient>
+  </defs>
+  <rect
+    x="3"
+    y="3"
+    width="94"
+    height="94"
+    rx="24"
+    fill="#050706"
+    stroke="#39FF88"
+    strokeWidth="2"
+  />
+  <path
+    d="M50 13V22M43 13H57"
+    stroke="#39FF88"
+    strokeWidth="3"
+    strokeLinecap="round"
+  />
+  <path
+    d="M25 39Q25 29 36 29H64Q75 29 75 39V59Q75 69 64 69H36Q25 69 25 59Z"
+    fill="#101812"
+    stroke="url(#kl-neon)"
+    strokeWidth="2.5"
+  />
+  <rect x="34" y="40" width="11" height="11" rx="3" fill="#39FF88" />
+  <rect x="55" y="40" width="11" height="11" rx="3" fill="#39FF88" />
+  <path
+    d="M39 59H61"
+    stroke="#7DFFAD"
+    strokeWidth="3"
+    strokeLinecap="round"
+  />
+  <path
+    d="M18 42H25M75 42H82M18 55H25M75 55H82"
+    stroke="#39FF88"
+    strokeWidth="2.5"
+    strokeLinecap="round"
+  />
+  <text
+    x="50"
+    y="86"
+    textAnchor="middle"
+    fill="#7DFFAD"
+    fontSize="14"
+    fontWeight="900"
+    letterSpacing="2"
+  >
+    KL
+  </text>
+</svg>
+
 
             <div>
               <div
