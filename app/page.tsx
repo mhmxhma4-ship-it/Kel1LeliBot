@@ -24,8 +24,11 @@ type Trade = {
   side?: string;
   entry?: number;
   exit?: number;
+  entryPrice?: number;
+  exitPrice?: number;
   pnlPct?: number;
   netPct?: number;
+  netReturnPct?: number;
   pnl?: number;
   profit?: number;
   result?: string;
@@ -37,13 +40,16 @@ type Backtest = {
   symbol?: string;
   totalTrades?: number;
   tradesCount?: number;
-  winRate?: number;
   wins?: number;
   losses?: number;
+  winRate?: number;
+  winRatePct?: number;
   profitFactor?: number;
   netProfitPct?: number;
+  netReturnPct?: number;
   totalReturnPct?: number;
   startingCapital?: number;
+  initialCapital?: number;
   finalCapital?: number;
   maxDrawdownPct?: number;
   trades?: Trade[];
@@ -92,7 +98,9 @@ export default function Home() {
       setLastSignalUpdate(new Date().toLocaleTimeString());
     } catch (error) {
       setSignalError(
-        error instanceof Error ? error.message : "Gabim gjate marrjes se sinjalit."
+        error instanceof Error
+          ? error.message
+          : "Gabim gjate marrjes se sinjalit."
       );
     } finally {
       setSignalLoading(false);
@@ -183,6 +191,7 @@ export default function Home() {
   ]);
 
   const winRate = findValue(backtest ?? {}, [
+    "winRatePct",
     "winRate",
     "win_rate",
   ]);
@@ -193,6 +202,7 @@ export default function Home() {
   ]);
 
   const netReturn = findValue(backtest ?? {}, [
+    "netReturnPct",
     "netProfitPct",
     "totalReturnPct",
     "net_return_pct",
@@ -210,6 +220,7 @@ export default function Home() {
   ]);
 
   const startingCapital = findValue(backtest ?? {}, [
+    "initialCapital",
     "startingCapital",
     "starting_capital",
   ]);
@@ -481,6 +492,7 @@ export default function Home() {
                 <tbody>
                   {trades.map((trade, index) => {
                     const result = findValue(trade, [
+                      "netReturnPct",
                       "netPct",
                       "pnlPct",
                       "pnl",
@@ -488,29 +500,38 @@ export default function Home() {
                       "result",
                     ]);
 
+                    const numericResult =
+                      typeof result === "number"
+                        ? result
+                        : typeof result === "string" &&
+                            result.trim() !== "" &&
+                            Number.isFinite(Number(result))
+                          ? Number(result)
+                          : undefined;
+
                     return (
-                      <tr key={`${index}-${String(trade.entry ?? "")}`}>
+                      <tr key={`${index}-${String(trade.entryPrice ?? trade.entry ?? "")}`}>
                         <td style={cellStyle}>
                           {String(trade.side ?? "--").toUpperCase()}
                         </td>
                         <td style={cellStyle}>
-                          {displayValue(trade.entry)}
+                          {displayValue(trade.entryPrice ?? trade.entry)}
                         </td>
                         <td style={cellStyle}>
-                          {displayValue(trade.exit)}
+                          {displayValue(trade.exitPrice ?? trade.exit)}
                         </td>
                         <td
                           style={{
                             ...cellStyle,
                             color:
-                              typeof result === "number"
-                                ? result >= 0
+                              numericResult === undefined
+                                ? "#f8fafc"
+                                : numericResult >= 0
                                   ? "#22c55e"
-                                  : "#ef4444"
-                                : "#f8fafc",
+                                  : "#ef4444",
                           }}
                         >
-                          {displayValue(result, typeof result === "number" ? "%" : "")}
+                          {displayValue(numericResult ?? result, numericResult !== undefined ? "%" : "")}
                         </td>
                       </tr>
                     );
@@ -520,19 +541,6 @@ export default function Home() {
             </div>
           )}
         </section>
-
-        <footer
-          style={{
-            color: "#64748b",
-            fontSize: 12,
-            lineHeight: 1.6,
-            marginTop: 20,
-          }}
-        >
-          Ky panel ben analiza dhe backtest, jo tregtime reale. Rezultatet
-          historike nuk garantojne fitime ne te ardhmen. Mbaje faqen hapur per
-          rifreskim automatik.
-        </footer>
       </div>
     </main>
   );
