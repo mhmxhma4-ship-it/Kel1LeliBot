@@ -58,6 +58,17 @@ type Backtest = {
   [key: string]: unknown;
 };
 
+const timeZones = [
+  { name: "Greqi", city: "Athine", zone: "Europe/Athens", flag: "🇬🇷" },
+  { name: "Shqiperi", city: "Tirane", zone: "Europe/Tirane", flag: "🇦🇱" },
+  { name: "Londer", city: "Londer", zone: "Europe/London", flag: "🇬🇧" },
+  { name: "New York", city: "New York", zone: "America/New_York", flag: "🇺🇸" },
+  { name: "Tokyo", city: "Tokyo", zone: "Asia/Tokyo", flag: "🇯🇵" },
+  { name: "Dubai", city: "Dubai", zone: "Asia/Dubai", flag: "🇦🇪" },
+  { name: "Frankfurt", city: "Frankfurt", zone: "Europe/Berlin", flag: "🇩🇪" },
+  { name: "Sydney", city: "Sydney", zone: "Australia/Sydney", flag: "🇦🇺" },
+];
+
 function displayValue(value: unknown, suffix = "") {
   if (value === undefined || value === null || value === "") {
     return "--";
@@ -88,9 +99,7 @@ function findValue(
 }
 
 function displayTime(value: unknown) {
-  if (typeof value !== "string" || !value) {
-    return "--";
-  }
+  if (typeof value !== "string" || !value) return "--";
 
   const match = value.match(
     /(?:T|\s)(\d{2}:\d{2})(?::(\d{2}))?/
@@ -101,6 +110,33 @@ function displayTime(value: unknown) {
   }
 
   return value;
+}
+
+function getLocalTime(zone: string, now: Date) {
+  try {
+    return new Intl.DateTimeFormat("en-GB", {
+      timeZone: zone,
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hourCycle: "h23",
+    }).format(now);
+  } catch {
+    return "--:--:--";
+  }
+}
+
+function getLocalDate(zone: string, now: Date) {
+  try {
+    return new Intl.DateTimeFormat("en-GB", {
+      timeZone: zone,
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    }).format(now);
+  } catch {
+    return "--";
+  }
 }
 
 export default function Home() {
@@ -115,6 +151,13 @@ export default function Home() {
 
   const [lastSignalUpdate, setLastSignalUpdate] = useState("");
   const [lastBacktestUpdate, setLastBacktestUpdate] = useState("");
+  const [now, setNow] = useState<Date | null>(null);
+
+  const [selectedZones, setSelectedZones] = useState<string[]>(
+    timeZones.map((item) => item.zone)
+  );
+
+  const [showAllZones, setShowAllZones] = useState(true);
 
   const refreshSignal = useCallback(async () => {
     try {
@@ -166,6 +209,16 @@ export default function Home() {
     } finally {
       setBacktestLoading(false);
     }
+  }, []);
+
+  useEffect(() => {
+    setNow(new Date());
+
+    const clockTimer = window.setInterval(() => {
+      setNow(new Date());
+    }, 1000);
+
+    return () => window.clearInterval(clockTimer);
   }, []);
 
   useEffect(() => {
@@ -295,6 +348,10 @@ export default function Home() {
     overflowWrap: "anywhere" as const,
   };
 
+  const visibleZones = timeZones.filter((item) =>
+    selectedZones.includes(item.zone)
+  );
+
   return (
     <main
       style={{
@@ -349,10 +406,157 @@ export default function Home() {
             </div>
 
             <div style={{ color: "#94a3b8", marginTop: 6 }}>
-              Rifreskim: cdo 60 sekonda
+              Rifreskim sinjali: cdo 60 sekonda
             </div>
           </div>
         </header>
+
+        <section style={{ ...panelStyle, marginBottom: 24 }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: 12,
+              marginBottom: 16,
+            }}
+          >
+            <div>
+              <h2 style={{ fontSize: 22, margin: 0 }}>
+                Oraret boterore
+              </h2>
+              <p style={{ color: "#94a3b8", fontSize: 13, marginBottom: 0 }}>
+                Ora lokale ne secilin vend, ne kohe reale
+              </p>
+            </div>
+
+            <button
+              onClick={() => setShowAllZones((value) => !value)}
+              style={buttonStyle}
+            >
+              {showAllZones ? "Fshih zgjedhjet" : "Zgjidh vendet"}
+            </button>
+          </div>
+
+          {showAllZones && (
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: 8,
+                marginBottom: 18,
+              }}
+            >
+              {timeZones.map((place) => {
+                const checked = selectedZones.includes(place.zone);
+
+                return (
+                  <button
+                    key={place.zone}
+                    onClick={() => {
+                      setSelectedZones((current) =>
+                        checked
+                          ? current.filter((zone) => zone !== place.zone)
+                          : [...current, place.zone]
+                      );
+                    }}
+                    style={{
+                      border: checked
+                        ? "1px solid #fbbf24"
+                        : "1px solid #334155",
+                      background: checked ? "#292315" : "#0b1220",
+                      color: checked ? "#fbbf24" : "#cbd5e1",
+                      borderRadius: 9,
+                      padding: "8px 11px",
+                      cursor: "pointer",
+                      fontSize: 13,
+                    }}
+                  >
+                    {place.flag} {place.name} {checked ? "✓" : "+"}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {visibleZones.length === 0 ? (
+            <p style={{ color: "#94a3b8" }}>
+              Zgjidh te pakten nje vend per te pare oren.
+            </p>
+          ) : (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "repeat(auto-fit, minmax(210px, 1fr))",
+                gap: 12,
+              }}
+            >
+              {visibleZones.map((place) => (
+                <div
+                  key={place.zone}
+                  style={{
+                    background: "#0b1220",
+                    border: "1px solid #273449",
+                    borderRadius: 13,
+                    padding: 16,
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    <span style={{ fontSize: 15, fontWeight: 700 }}>
+                      {place.flag} {place.name}
+                    </span>
+                    <span style={{ color: "#64748b", fontSize: 11 }}>
+                      {place.city}
+                    </span>
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: 29,
+                      fontWeight: 800,
+                      color: "#fbbf24",
+                      marginTop: 14,
+                      fontVariantNumeric: "tabular-nums",
+                    }}
+                  >
+                    {now ? getLocalTime(place.zone, now) : "--:--:--"}
+                  </div>
+
+                  <div
+                    style={{
+                      color: "#94a3b8",
+                      fontSize: 12,
+                      marginTop: 5,
+                    }}
+                  >
+                    {now ? getLocalDate(place.zone, now) : "--"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <p
+            style={{
+              color: "#64748b",
+              fontSize: 12,
+              marginBottom: 0,
+              marginTop: 16,
+            }}
+          >
+            Oret perditesohen cdo sekonde. Zonat kohore pershtaten
+            automatikisht me oren verore dhe dimerore.
+          </p>
+        </section>
 
         <section
           style={{
@@ -643,7 +847,10 @@ export default function Home() {
                     return (
                       <tr
                         key={`${index}-${String(
-                          trade.entryTime ?? trade.entryPrice ?? trade.entry ?? ""
+                          trade.entryTime ??
+                            trade.entryPrice ??
+                            trade.entry ??
+                            ""
                         )}`}
                       >
                         <td style={cellStyle}>
