@@ -68,7 +68,6 @@ export function calculateEMA(
   for (let i = period; i < values.length; i++) {
     previousEMA =
       values[i] * multiplier + previousEMA * (1 - multiplier);
-
     result[i] = previousEMA;
   }
 
@@ -95,7 +94,6 @@ export function calculateRSISeries(
 
   for (let i = 1; i <= period; i++) {
     const change = values[i] - values[i - 1];
-
     averageGain += Math.max(change, 0);
     averageLoss += Math.max(-change, 0);
   }
@@ -344,16 +342,16 @@ export function analyzeCandles(candles: Candle[]): StrategyResult {
     const range = candle.high - candle.low;
     if (range <= 0) return "WAIT";
 
-    // Shmang hyrjet kur cmimi eshte shume larg mesatares.
-    if (Math.abs(candle.close - ema21) > atr * 1.25) {
+    // Lejohet me shume distance nga EMA 21, por jo hyrje ekstreme.
+    if (Math.abs(candle.close - ema21) > atr * 2) {
       return "WAIT";
     }
 
-    // Filtrim i tregut shume te qete ose te levizjeve ekstreme.
+    // Filtron tregun pothuajse pa levizje dhe qirinjt jashtezakonisht te medhenj.
     if (
-      atr / candle.close < 0.00005 ||
-      range < averageRange * 0.45 ||
-      range > atr * 2.5
+      atr / candle.close < 0.00002 ||
+      range < averageRange * 0.25 ||
+      range > atr * 3
     ) {
       return "WAIT";
     }
@@ -363,28 +361,25 @@ export function analyzeCandles(candles: Candle[]): StrategyResult {
     const bullishCandle =
       candle.close > candle.open &&
       candle.close > previousCandle.close &&
-      closeLocation >= 0.65;
+      closeLocation >= 0.55;
 
     const bearishCandle =
       candle.close < candle.open &&
       candle.close < previousCandle.close &&
-      closeLocation <= 0.35;
+      closeLocation <= 0.45;
 
     const bullishTrend =
       candle.close > ema200 &&
-      ema200 > previousEma200 &&
       ema21 > ema50 &&
-      ema50 > ema200;
+      ema200 >= previousEma200;
 
     const bearishTrend =
       candle.close < ema200 &&
-      ema200 < previousEma200 &&
       ema21 < ema50 &&
-      ema50 < ema200;
+      ema200 <= previousEma200;
 
     const histogram = macd - macdSignal;
 
-    // Krahaso cmimin me 8 qirinjte e mbyllur para qiriut aktual.
     const lookback = 8;
     let previousHigh = -Infinity;
     let previousLow = Infinity;
@@ -416,14 +411,15 @@ export function analyzeCandles(candles: Candle[]): StrategyResult {
     if (ema9 > ema21) buyScore += 15;
     if (ema9 < ema21) sellScore += 15;
 
-    if (bullishTrend) buyScore += 25;
-    if (bearishTrend) sellScore += 25;
+    if (bullishTrend) buyScore += 20;
+    if (bearishTrend) sellScore += 20;
 
-    if (rsi >= 52 && rsi <= 66 && rsi >= previousRsi) {
+    // Interval me i gjere RSI per me shume mundesi sinjali.
+    if (rsi >= 50 && rsi <= 70 && rsi >= previousRsi) {
       buyScore += 15;
     }
 
-    if (rsi >= 34 && rsi <= 48 && rsi <= previousRsi) {
+    if (rsi >= 30 && rsi <= 50 && rsi <= previousRsi) {
       sellScore += 15;
     }
 
@@ -441,12 +437,25 @@ export function analyzeCandles(candles: Candle[]): StrategyResult {
     if (bullishMomentum) buyScore += 15;
     if (bearishMomentum) sellScore += 15;
 
-    // Trend i forte dhe minimumi i pikve te kerkuara.
-    if (bullishTrend && buyScore >= 85 && buyScore > sellScore) {
+    // Pragu i ri: 60 pike. Nuk kerkohet me trend perfekt EMA 200.
+    // Duhet gjithsesi qe drejtimi i EMA 9/21 te perputhet me sinjalin.
+    const minimumScore = 60;
+
+    if (
+      buyScore >= minimumScore &&
+      buyScore > sellScore &&
+      ema9 > ema21 &&
+      candle.close > ema50
+    ) {
       return "BUY";
     }
 
-    if (bearishTrend && sellScore >= 85 && sellScore > buyScore) {
+    if (
+      sellScore >= minimumScore &&
+      sellScore > buyScore &&
+      ema9 < ema21 &&
+      candle.close < ema50
+    ) {
       return "SELL";
     }
 
@@ -466,15 +475,15 @@ export function analyzeCandles(candles: Candle[]): StrategyResult {
 
   let confidence = 0;
   let reason =
-    "WAIT: Konfirmimet nuk jane te mjaftueshme. Prit nje hyrje me te qarte.";
+    "WAIT: Piket ose konfirmimet nuk jane te mjaftueshme per sinjal.";
 
   if (signal !== "WAIT") {
     const previousCandle = candles[lastIndex - 1];
-    const previousEma200 = ema200Series[lastIndex - 5];
     const ema50 = ema50Series[lastIndex];
+    const previousEma200 = ema200Series[lastIndex - 5];
+    const previousRsi = rsiSeries[lastIndex - 1];
     const macd = macdSeries[lastIndex];
     const macdSignal = macdSignalSeries[lastIndex];
-    const previousRsi = rsiSeries[lastIndex - 1];
 
     let score = 0;
 
@@ -493,23 +502,21 @@ export function analyzeCandles(candles: Candle[]): StrategyResult {
       ema21 !== null &&
       (signal === "BUY"
         ? lastCandle.close > ema200 &&
-          ema200 > previousEma200 &&
           ema21 > ema50 &&
-          ema50 > ema200
+          ema200 >= previousEma200
         : lastCandle.close < ema200 &&
-          ema200 < previousEma200 &&
           ema21 < ema50 &&
-          ema50 < ema200)
+          ema200 <= previousEma200)
     ) {
-      score += 25;
+      score += 20;
     }
 
     if (
       rsi !== null &&
       previousRsi !== null &&
       (signal === "BUY"
-        ? rsi >= 52 && rsi <= 66 && rsi >= previousRsi
-        : rsi >= 34 && rsi <= 48 && rsi <= previousRsi)
+        ? rsi >= 50 && rsi <= 70 && rsi >= previousRsi
+        : rsi >= 30 && rsi <= 50 && rsi <= previousRsi)
     ) {
       score += 15;
     }
@@ -530,10 +537,10 @@ export function analyzeCandles(candles: Candle[]): StrategyResult {
       signal === "BUY"
         ? lastCandle.close > lastCandle.open &&
           lastCandle.close > previousCandle.close &&
-          closeLocation >= 0.65
+          closeLocation >= 0.55
         : lastCandle.close < lastCandle.open &&
           lastCandle.close < previousCandle.close &&
-          closeLocation <= 0.35
+          closeLocation <= 0.45
     ) {
       score += 15;
     }
@@ -567,11 +574,12 @@ export function analyzeCandles(candles: Candle[]): StrategyResult {
     confidence = score;
 
     reason =
-      `${signal}: Trendi, momenti dhe qiriu kaluan filtrat. ` +
-      `Piket e strategjise: ${confidence}/100. Nuk jane probabilitet fitimi.`;
+      `${signal}: Sinjali kaloi pragun e strategjise. ` +
+      `Piket e konfirmimit: ${confidence}/100. ` +
+      `Piket nuk jane probabilitet fitimi.`;
   }
 
-  // SL dhe TP llogariten nga cmimi i sinjalit dhe ATR.
+  // SL dhe TP bazohen ne ATR; raporti synim/rrezik eshte 2:1.
   const stopDistance =
     atr !== null && atr > 0 ? atr * 1.5 : null;
 
