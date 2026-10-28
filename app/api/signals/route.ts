@@ -1,29 +1,91 @@
-import { NextResponse } from "next/server";
+
+import { NextRequest, NextResponse } from "next/server";
+import { createHmac, timingSafeEqual } from "node:crypto";
 import { analyzeCandles, parseCandles } from "@/lib/strategy";
+
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+
+const COOKIE_NAME = "keli_access";
+
 function roundToTwo(value: number | null): number | null {
   if (value === null || !Number.isFinite(value)) return null;
   return Number(value.toFixed(2));
 }
-export async function GET() {
+
+function hasValidSession(request: NextRequest): boolean {
+  const token = request.cookies.get(COOKIE_NAME)?.value;
+  const secret = process.env.ACCESS_ADMIN_SECRET;
+
+  if (!token || !secret) return false;
+
+  try {
+    const [payload, signature] = token.split(".");
+    if (!payload || !signature) return false;
+
+    const expected = createHmac("sha256", secret)
+      .update(payload)
+      .digest("hex");
+
+    const actualBuffer = Buffer.from(signature);
+    const expectedBuffer = Buffer.from(expected);
+
+    if (
+      actualBuffer.length !== expectedBuffer.length ||
+      !timingSafeEqual(actualBuffer, expectedBuffer)
+    ) {
+      return false;
+    }
+
+    const session = JSON.parse(
+      Buffer.from(payload, "base64url").toString("utf8")
+    );
+
+    if (session.access !== true) return false;
+
+    if (
+      session.expiresAt &&
+      Date.parse(session.expiresAt) <= Date.now()
+    ) {
+      return false;
+    }
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function GET(request: NextRequest) {
+  if (!hasValidSession(request)) {
+    return NextResponse.json(
+      { error: "Duhet nje kod aktiv per te pare sinjalet." },
+      { status: 401 }
+    );
+  }
+
   const apiKey = process.env.TWELVE_DATA_API_KEY;
+
   if (!apiKey) {
     return NextResponse.json(
       { error: "Mungon TWELVE_DATA_API_KEY ne variablat e mjedisit." },
       { status: 503 }
     );
   }
+
   try {
     const url = new URL("https://api.twelvedata.com/time_series");
     url.searchParams.set("symbol", "XAU/USD");
     url.searchParams.set("interval", "5min");
     url.searchParams.set("outputsize", "500");
     url.searchParams.set("apikey", apiKey);
+
     const response = await fetch(url.toString(), {
       cache: "no-store",
     });
+
     const data = await response.json();
+
     if (
       !response.ok ||
       data.status === "error" ||
@@ -39,7 +101,9 @@ export async function GET() {
         { status: 502 }
       );
     }
+
     const candles = parseCandles(data.values);
+
     if (candles.length < 220) {
       return NextResponse.json(
         {
@@ -49,10 +113,13 @@ export async function GET() {
         { status: 422 }
       );
     }
+
     const orderedCandles = [...candles].sort(
       (a, b) => Date.parse(a.datetime) - Date.parse(b.datetime)
     );
+
     const result = analyzeCandles(orderedCandles);
+
     return NextResponse.json(
       {
         symbol: "XAU/USD",
