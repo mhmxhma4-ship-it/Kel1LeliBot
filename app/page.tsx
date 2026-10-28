@@ -5,39 +5,26 @@ import { useCallback, useEffect, useState } from "react";
 
 type Data = Record<string, any>;
 
-const formatNumber = (
-  value: unknown,
-  decimals = 2
-): string => {
-  if (value === null || value === undefined || value === "") {
-    return "—";
-  }
+const formatNumber = (value: unknown, decimals = 2): string => {
+  if (value === null || value === undefined || value === "") return "—";
 
   const number =
     typeof value === "number"
       ? value
       : Number(String(value).replace(",", "."));
 
-  return Number.isFinite(number)
-    ? number.toFixed(decimals)
-    : "—";
+  return Number.isFinite(number) ? number.toFixed(decimals) : "—";
 };
 
 const formatPrice = (value: unknown) => formatNumber(value, 3);
 const formatRSI = (value: unknown) => formatNumber(value, 2);
 
-const getNumber = (
-  obj: Data | null,
-  keys: string[]
-): number | null => {
+const getNumber = (obj: Data | null, keys: string[]): number | null => {
   if (!obj) return null;
 
   for (const key of keys) {
     const value = obj[key];
-
-    if (value === null || value === undefined || value === "") {
-      continue;
-    }
+    if (value === null || value === undefined || value === "") continue;
 
     const number =
       typeof value === "number"
@@ -50,18 +37,11 @@ const getNumber = (
   return null;
 };
 
-const getValue = (
-  obj: Data | null,
-  keys: string[]
-): any => {
+const getValue = (obj: Data | null, keys: string[]): any => {
   if (!obj) return undefined;
 
   for (const key of keys) {
-    if (
-      obj[key] !== undefined &&
-      obj[key] !== null &&
-      obj[key] !== ""
-    ) {
+    if (obj[key] !== undefined && obj[key] !== null && obj[key] !== "") {
       return obj[key];
     }
   }
@@ -185,7 +165,6 @@ const t = (language: string, key: string) =>
 
 function calculateScores(data: Data | null) {
   const rsi = getNumber(data, ["rsi", "RSI", "rsi_value", "rsiValue"]);
-
   const ema9 = getNumber(data, ["ema9", "ema_9"]);
   const ema21 = getNumber(data, ["ema21", "ema_21"]);
   const ema200 = getNumber(data, ["ema200", "ema_200"]);
@@ -320,8 +299,6 @@ export default function Home() {
       }
 
       const signalData = await signalResponse.json();
-
-      // Backtest mund te mos jete gati; mos blloko sinjalet per kete arsye.
       let backtestData: Data | null = null;
 
       if (backtestResponse.ok) {
@@ -395,12 +372,7 @@ export default function Home() {
   );
 
   const entryPrice = formatPrice(
-    getNumber(signals, [
-      "entryPrice",
-      "entry_price",
-      "entry",
-      "price",
-    ])
+    getNumber(signals, ["entryPrice", "entry_price", "entry", "price"])
   );
 
   const stopLoss = formatPrice(
@@ -461,7 +433,10 @@ export default function Home() {
   return (
     <main className="app-shell">
       <style jsx global>{`
-        * { box-sizing: border-box; }
+        * {
+          box-sizing: border-box;
+        }
+
         body {
           margin: 0;
           background: #08090c;
@@ -469,82 +444,541 @@ export default function Home() {
           font-family: Inter, ui-sans-serif, system-ui, -apple-system,
             BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
-        button, select { font: inherit; }
+
+        button,
+        select {
+          font: inherit;
+        }
+
         .app-shell {
           min-height: 100vh;
+          width: 100%;
           padding: 24px;
-          background: radial-gradient(ellipse at top right, rgba(194,146,45,.11), transparent 35%), #08090c;
+          background: radial-gradient(
+              ellipse at top right,
+              rgba(194, 146, 45, 0.11),
+              transparent 35%
+            ),
+            #08090c;
         }
-        .container { max-width: 1200px; margin: 0 auto; }
-        .topbar { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:28px; }
-        .brand { display:flex; align-items:center; gap:12px; min-width:0; }
-        .brand-mark { width:43px; height:43px; border:1px solid #9f792d; border-radius:13px; display:grid; place-items:center; color:#e8bd59; font-weight:900; background:#17130a; }
-        .brand-title { margin:0; font-size:21px; font-weight:800; }
-        .subtitle { color:#888b95; font-size:12px; margin-top:4px; }
-        .top-actions { display:flex; align-items:center; gap:10px; }
-        .live-pill { display:flex; align-items:center; gap:7px; color:#7ee0a4; border:1px solid #235b3b; background:#102218; padding:8px 11px; border-radius:999px; font-size:11px; font-weight:800; }
-        .live-dot { width:7px; height:7px; border-radius:50%; background:#4cdb82; }
-        .icon-button { width:38px; height:38px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; border:1px solid #33343b; border-radius:10px; background:#14151a; color:#f4f4f5; cursor:pointer; padding:0; }
-        .hamb-line { height:2px; background:#e8bd59; border-radius:3px; display:block; }
-        .hamb-line:nth-child(1), .hamb-line:nth-child(3) { width:16px; }
-        .hamb-line:nth-child(2) { width:11px; }
-        .close-mark { position:relative; width:17px; height:17px; display:block; }
-        .close-mark::before, .close-mark::after { content:""; position:absolute; left:7.75px; top:0; height:17px; width:1.5px; background:#e8bd59; border-radius:2px; }
-        .close-mark::before { transform:rotate(45deg); }
-        .close-mark::after { transform:rotate(-45deg); }
-        .panel { border:1px solid #282930; border-radius:17px; padding:20px; background:linear-gradient(145deg, rgba(22,23,28,.96), rgba(13,14,18,.98)); box-shadow:0 10px 35px rgba(0,0,0,.12); }
-        .panel-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:18px; }
-        .panel-title { margin:0; font-size:15px; font-weight:750; }
-        .gold-text { color:#e8bd59 !important; }
-        .metrics-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
-        .metric { padding:17px; border:1px solid #292a31; border-radius:13px; background:rgba(255,255,255,.018); min-width:0; }
-        .metric-label { color:#92939c; font-size:12px; margin-bottom:10px; }
-        .metric-value { color:#f3f3f5; font-size:clamp(18px,2.4vw,25px); font-weight:800; overflow-wrap:anywhere; font-variant-numeric:tabular-nums; }
-        .signal-value { font-size:25px; letter-spacing:.4px; }
-        .signal-buy, .positive { color:#54dc94 !important; }
-        .signal-sell, .negative { color:#ff6e78 !important; }
-        .signal-neutral { color:#e8bd59 !important; }
-        .score-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-top:14px; }
-        .score-card { padding:17px; border-radius:13px; border:1px solid #292a31; background:#101116; }
-        .score-top { display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:12px; }
-        .score-name { font-size:13px; font-weight:750; }
-        .score-number { font-size:25px; font-weight:850; font-variant-numeric:tabular-nums; }
-        .buy-color { color:#54dc94; }
-        .sell-color { color:#ff6e78; }
-        .bar-track { width:100%; height:8px; border-radius:999px; overflow:hidden; background:#282930; }
-        .bar-fill { height:100%; border-radius:999px; transition:width .35s ease; }
-        .buy-fill { background:#39c981; }
-        .sell-fill { background:#f05d6c; }
-        .score-note { color:#888b95; font-size:11px; margin-top:12px; line-height:1.5; }
-        .section-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin:18px 0; }
-        .stats-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
-        .table-wrap { overflow-x:auto; }
-        table { width:100%; border-collapse:collapse; min-width:560px; }
-        th, td { padding:13px 12px; border-bottom:1px solid #292a31; text-align:left; font-size:12px; white-space:nowrap; }
-        th { color:#92939c; font-weight:650; }
-        td { color:#e4e4e7; }
-        .muted { color:#888b95; font-size:12px; }
-        .refresh-button { border:1px solid #795c24; color:#e8bd59; background:#211a0d; padding:9px 12px; border-radius:9px; cursor:pointer; font-size:12px; }
-        .refresh-button:disabled { opacity:.6; cursor:wait; }
-        .menu-backdrop { position:fixed; inset:0; z-index:20; background:rgba(0,0,0,.55); display:flex; justify-content:flex-end; }
-        .menu-panel { width:min(340px,88vw); height:100%; padding:22px; background:#111217; border-left:1px solid #383027; box-shadow:-20px 0 60px rgba(0,0,0,.35); }
-        .menu-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:26px; }
-        .menu-title { font-size:17px; font-weight:800; }
-        .menu-close { width:30px; height:30px; display:flex; align-items:center; justify-content:center; border:1px solid #393a42; border-radius:8px; background:#1c1d23; color:#e8bd59; font-size:23px; line-height:1; padding:0; cursor:pointer; }
-        .field-label { display:block; color:#a1a1aa; font-size:12px; margin:18px 0 8px; }
-        .select-field { width:100%; padding:12px; color:#f4f4f5; background:#1a1b21; border:1px solid #373840; border-radius:9px; outline:none; }
-        .error-message { color:#ff8d94; background:#2a1418; border:1px solid #5b292f; border-radius:10px; padding:12px; font-size:12px; margin-bottom:18px; overflow-wrap:anywhere; }
-        @media(max-width:760px) {
-          .app-shell { padding:15px; }
-          .topbar { align-items:flex-start; }
-          .subtitle { max-width:200px; line-height:1.4; }
-          .live-pill { padding:7px 9px; }
-          .metrics-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
-          .score-grid, .section-grid { grid-template-columns:1fr; }
-          .panel { padding:15px; }
-          .stats-grid { gap:8px; }
-          .metric { padding:14px; }
-          .metric-value { font-size:21px; }
+
+        .container {
+          width: 100%;
+          max-width: 1200px;
+          margin: 0 auto;
+          min-width: 0;
+        }
+
+        .topbar {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
+          margin-bottom: 28px;
+        }
+
+        .brand {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          min-width: 0;
+        }
+
+        .brand-mark {
+          width: 43px;
+          height: 43px;
+          flex-shrink: 0;
+          border: 1px solid #9f792d;
+          border-radius: 13px;
+          display: grid;
+          place-items: center;
+          color: #e8bd59;
+          font-weight: 900;
+          background: #17130a;
+        }
+
+        .brand-title {
+          margin: 0;
+          font-size: 21px;
+          font-weight: 800;
+        }
+
+        .subtitle {
+          color: #888b95;
+          font-size: 12px;
+          margin-top: 4px;
+        }
+
+        .top-actions {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+
+        .live-pill {
+          display: flex;
+          align-items: center;
+          gap: 7px;
+          color: #7ee0a4;
+          border: 1px solid #235b3b;
+          background: #102218;
+          padding: 8px 11px;
+          border-radius: 999px;
+          font-size: 11px;
+          font-weight: 800;
+        }
+
+        .live-dot {
+          width: 7px;
+          height: 7px;
+          border-radius: 50%;
+          background: #4cdb82;
+        }
+
+        .icon-button {
+          width: 38px;
+          height: 38px;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 4px;
+          border: 1px solid #33343b;
+          border-radius: 10px;
+          background: #14151a;
+          color: #f4f4f5;
+          cursor: pointer;
+          padding: 0;
+        }
+
+        .hamb-line {
+          height: 2px;
+          background: #e8bd59;
+          border-radius: 3px;
+          display: block;
+        }
+
+        .hamb-line:nth-child(1),
+        .hamb-line:nth-child(3) {
+          width: 16px;
+        }
+
+        .hamb-line:nth-child(2) {
+          width: 11px;
+        }
+
+        .close-mark {
+          position: relative;
+          width: 17px;
+          height: 17px;
+          display: block;
+        }
+
+        .close-mark::before,
+        .close-mark::after {
+          content: "";
+          position: absolute;
+          left: 7.75px;
+          top: 0;
+          height: 17px;
+          width: 1.5px;
+          background: #e8bd59;
+          border-radius: 2px;
+        }
+
+        .close-mark::before {
+          transform: rotate(45deg);
+        }
+
+        .close-mark::after {
+          transform: rotate(-45deg);
+        }
+
+        .panel {
+          border: 1px solid #282930;
+          border-radius: 17px;
+          padding: 20px;
+          background: linear-gradient(
+            145deg,
+            rgba(22, 23, 28, 0.96),
+            rgba(13, 14, 18, 0.98)
+          );
+          box-shadow: 0 10px 35px rgba(0, 0, 0, 0.12);
+          min-width: 0;
+        }
+
+        .panel-heading {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          margin-bottom: 18px;
+        }
+
+        .panel-title {
+          margin: 0;
+          font-size: 15px;
+          font-weight: 750;
+        }
+
+        .gold-text {
+          color: #e8bd59 !important;
+        }
+
+        .metrics-grid {
+          display: grid;
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+          gap: 14px;
+        }
+
+        .metric {
+          padding: 17px;
+          border: 1px solid #292a31;
+          border-radius: 13px;
+          background: rgba(255, 255, 255, 0.018);
+          min-width: 0;
+        }
+
+        .metric-label {
+          color: #92939c;
+          font-size: 12px;
+          margin-bottom: 10px;
+        }
+
+        .metric-value {
+          color: #f3f3f5;
+          font-size: clamp(18px, 2.4vw, 25px);
+          font-weight: 800;
+          overflow-wrap: anywhere;
+          font-variant-numeric: tabular-nums;
+        }
+
+        .signal-value {
+          font-size: 25px;
+          letter-spacing: 0.4px;
+        }
+
+        .signal-buy,
+        .positive {
+          color: #54dc94 !important;
+        }
+
+        .signal-sell,
+        .negative {
+          color: #ff6e78 !important;
+        }
+
+        .signal-neutral {
+          color: #e8bd59 !important;
+        }
+
+        .score-grid {
+          display: grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 14px;
+          margin-top: 14px;
+        }
+
+        .score-card {
+          padding: 17px;
+          border-radius: 13px;
+          border: 1px solid #292a31;
+          background: #101116;
+          min-width: 0;
+        }
+
+        .score-top {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 10px;
+          margin-bottom: 12px;
+        }
+
+        .score-name {
+          font-size: 13px;
+          font-weight: 750;
+        }
+
+        .score-number {
+          font-size: 25px;
+          font-weight: 850;
+          font-variant-numeric: tabular-nums;
+        }
+
+        .buy-color {
+          color: #54dc94;
+        }
+
+        .sell-color {
+          color: #ff6e78;
+        }
+
+        .bar-track {
+          width: 100%;
+          height: 8px;
+          border-radius: 999px;
+          overflow: hidden;
+          background: #282930;
+        }
+
+        .bar-fill {
+          height: 100%;
+          border-radius: 999px;
+          transition: width 0.35s ease;
+        }
+
+        .buy-fill {
+          background: #39c981;
+        }
+
+        .sell-fill {
+          background: #f05d6c;
+        }
+
+        .score-note {
+          color: #888b95;
+          font-size: 11px;
+          margin-top: 12px;
+          line-height: 1.5;
+        }
+
+        /* Desktop: dy panelet ndajne gjeresine ne menyre te balancuar */
+        .section-grid {
+          display: grid;
+          grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+          gap: 14px;
+          margin: 18px 0;
+          width: 100%;
+          min-width: 0;
+          align-items: start;
+        }
+
+        .section-grid > .panel {
+          min-width: 0;
+          width: 100%;
+          padding: 17px;
+        }
+
+        .stats-grid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 12px;
+          min-width: 0;
+        }
+
+        .section-grid .metric {
+          min-width: 0;
+          padding: 12px;
+        }
+
+        .section-grid .metric-value {
+          font-size: clamp(14px, 1.5vw, 20px);
+        }
+
+        .table-wrap {
+          width: 100%;
+          min-width: 0;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+        }
+
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          min-width: 560px;
+        }
+
+        th,
+        td {
+          padding: 13px 12px;
+          border-bottom: 1px solid #292a31;
+          text-align: left;
+          font-size: 12px;
+          white-space: nowrap;
+        }
+
+        th {
+          color: #92939c;
+          font-weight: 650;
+        }
+
+        td {
+          color: #e4e4e7;
+        }
+
+        .muted {
+          color: #888b95;
+          font-size: 12px;
+        }
+
+        .refresh-button {
+          border: 1px solid #795c24;
+          color: #e8bd59;
+          background: #211a0d;
+          padding: 9px 12px;
+          border-radius: 9px;
+          cursor: pointer;
+          font-size: 12px;
+        }
+
+        .refresh-button:disabled {
+          opacity: 0.6;
+          cursor: wait;
+        }
+
+        .menu-backdrop {
+          position: fixed;
+          inset: 0;
+          z-index: 20;
+          background: rgba(0, 0, 0, 0.55);
+          display: flex;
+          justify-content: flex-end;
+        }
+
+        .menu-panel {
+          width: min(340px, 88vw);
+          height: 100%;
+          padding: 22px;
+          background: #111217;
+          border-left: 1px solid #383027;
+          box-shadow: -20px 0 60px rgba(0, 0, 0, 0.35);
+        }
+
+        .menu-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 26px;
+        }
+
+        .menu-title {
+          font-size: 17px;
+          font-weight: 800;
+        }
+
+        .menu-close {
+          width: 30px;
+          height: 30px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid #393a42;
+          border-radius: 8px;
+          background: #1c1d23;
+          color: #e8bd59;
+          font-size: 23px;
+          line-height: 1;
+          padding: 0;
+          cursor: pointer;
+        }
+
+        .field-label {
+          display: block;
+          color: #a1a1aa;
+          font-size: 12px;
+          margin: 18px 0 8px;
+        }
+
+        .select-field {
+          width: 100%;
+          padding: 12px;
+          color: #f4f4f5;
+          background: #1a1b21;
+          border: 1px solid #373840;
+          border-radius: 9px;
+          outline: none;
+        }
+
+        .error-message {
+          color: #ff8d94;
+          background: #2a1418;
+          border: 1px solid #5b292f;
+          border-radius: 10px;
+          padding: 12px;
+          font-size: 12px;
+          margin-bottom: 18px;
+          overflow-wrap: anywhere;
+        }
+
+        @media (max-width: 760px) {
+          .app-shell {
+            padding: 12px;
+            width: 100%;
+            overflow-x: hidden;
+          }
+
+          .container {
+            width: 100%;
+            max-width: 100%;
+          }
+
+          .topbar {
+            align-items: flex-start;
+          }
+
+          .subtitle {
+            max-width: 200px;
+            line-height: 1.4;
+          }
+
+          .live-pill {
+            padding: 7px 9px;
+          }
+
+          .metrics-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+          }
+
+          .score-grid,
+          .section-grid {
+            grid-template-columns: minmax(0, 1fr);
+            width: 100%;
+            gap: 12px;
+          }
+
+          .section-grid > .panel {
+            width: 100%;
+            padding: 14px;
+          }
+
+          .stats-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 7px;
+          }
+
+          .section-grid .metric {
+            padding: 9px 7px;
+          }
+
+          .section-grid .metric-label {
+            font-size: 10px;
+            overflow-wrap: anywhere;
+          }
+
+          .section-grid .metric-value {
+            font-size: clamp(13px, 4vw, 18px);
+          }
+
+          .panel {
+            padding: 15px;
+            min-width: 0;
+          }
+
+          .metric {
+            padding: 14px;
+          }
+
+          .metric-value {
+            font-size: 21px;
+          }
+
+          .table-wrap {
+            max-width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+          }
         }
       `}</style>
 
@@ -563,6 +997,7 @@ export default function Home() {
               <span className="live-dot" />
               {text("live")}
             </div>
+
             <button
               className="icon-button"
               aria-label={menuOpen ? text("close") : text("menu")}
@@ -590,6 +1025,7 @@ export default function Home() {
         <section className="panel">
           <div className="panel-heading">
             <h2 className="panel-title">{text("signal")}</h2>
+
             <button
               className="refresh-button"
               onClick={() => void loadData()}
@@ -621,11 +1057,14 @@ export default function Home() {
           <div className="score-grid">
             <div className="score-card">
               <div className="score-top">
-                <span className="score-name buy-color">{text("buyScore")}</span>
+                <span className="score-name buy-color">
+                  {text("buyScore")}
+                </span>
                 <span className="score-number buy-color">
                   {scores.hasData ? `${scores.buy}%` : "—"}
                 </span>
               </div>
+
               <div className="bar-track">
                 <div
                   className="bar-fill buy-fill"
@@ -636,11 +1075,14 @@ export default function Home() {
 
             <div className="score-card">
               <div className="score-top">
-                <span className="score-name sell-color">{text("sellScore")}</span>
+                <span className="score-name sell-color">
+                  {text("sellScore")}
+                </span>
                 <span className="score-number sell-color">
                   {scores.hasData ? `${scores.sell}%` : "—"}
                 </span>
               </div>
+
               <div className="bar-track">
                 <div
                   className="bar-fill sell-fill"
@@ -707,6 +1149,7 @@ export default function Home() {
                       <th>{text("result")}</th>
                     </tr>
                   </thead>
+
                   <tbody>
                     {trades.slice(0, 10).map((trade, index) => {
                       const result = getValue(trade, [
@@ -719,8 +1162,10 @@ export default function Home() {
 
                       const resultText = String(result ?? "—");
                       const lower = resultText.toLowerCase();
-                      const positive = Number(result) > 0 || lower.includes("win");
-                      const negative = Number(result) < 0 || lower.includes("loss");
+                      const positive =
+                        Number(result) > 0 || lower.includes("win");
+                      const negative =
+                        Number(result) < 0 || lower.includes("loss");
 
                       return (
                         <tr
@@ -738,6 +1183,7 @@ export default function Home() {
                               ]) ?? "—"
                             )}
                           </td>
+
                           <td>
                             {String(
                               getValue(trade, [
@@ -748,6 +1194,7 @@ export default function Home() {
                               ]) ?? "—"
                             )}
                           </td>
+
                           <td>
                             {formatPrice(
                               getNumber(trade, [
@@ -757,6 +1204,7 @@ export default function Home() {
                               ])
                             )}
                           </td>
+
                           <td>
                             {formatPrice(
                               getNumber(trade, [
@@ -766,6 +1214,7 @@ export default function Home() {
                               ])
                             )}
                           </td>
+
                           <td
                             className={
                               positive ? "positive" : negative ? "negative" : ""
@@ -797,6 +1246,7 @@ export default function Home() {
           >
             <div className="menu-header">
               <div className="menu-title">{text("menu")}</div>
+
               <button
                 className="menu-close"
                 aria-label={text("close")}
