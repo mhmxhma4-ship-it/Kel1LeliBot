@@ -28,11 +28,16 @@ export type StrategyResult = {
   signalAt: (index: number) => TradeSignal;
 };
 
-const isValidNumber = (value: number) =>
-  Number.isFinite(value);
+const isValidNumber = (value: number) => Number.isFinite(value);
 
 function roundPrice(value: number): number {
-  return Number(value.toFixed(3));
+  return Number(value.toFixed(2));
+}
+
+function roundIndicator(value: number | null): number | null {
+  return value !== null && Number.isFinite(value)
+    ? Number(value.toFixed(2))
+    : null;
 }
 
 export function calculateEMA(
@@ -62,9 +67,7 @@ export function calculateEMA(
 
   for (let i = period; i < values.length; i++) {
     previousEMA =
-      values[i] * multiplier +
-      previousEMA * (1 - multiplier);
-
+      values[i] * multiplier + previousEMA * (1 - multiplier);
     result[i] = previousEMA;
   }
 
@@ -80,7 +83,8 @@ export function calculateRSISeries(
   if (
     !Number.isInteger(period) ||
     period < 1 ||
-    values.length <= period
+    values.length <= period ||
+    values.some((value) => !isValidNumber(value))
   ) {
     return result;
   }
@@ -90,7 +94,6 @@ export function calculateRSISeries(
 
   for (let i = 1; i <= period; i++) {
     const change = values[i] - values[i - 1];
-
     averageGain += Math.max(change, 0);
     averageLoss += Math.max(-change, 0);
   }
@@ -113,12 +116,9 @@ export function calculateRSISeries(
     const change = values[i] - values[i - 1];
 
     averageGain =
-      (averageGain * (period - 1) + Math.max(change, 0)) /
-      period;
-
+      (averageGain * (period - 1) + Math.max(change, 0)) / period;
     averageLoss =
-      (averageLoss * (period - 1) + Math.max(-change, 0)) /
-      period;
+      (averageLoss * (period - 1) + Math.max(-change, 0)) / period;
 
     result[i] = getRSI(averageGain, averageLoss);
   }
@@ -170,9 +170,7 @@ export function calculateATR(
 
 export function parseCandles(values: unknown): Candle[] {
   if (!Array.isArray(values)) {
-    throw new Error(
-      "Te dhenat e qirinjve nga Twelve Data nuk jane valide."
-    );
+    throw new Error("Te dhenat e qirinjve nga Twelve Data nuk jane valide.");
   }
 
   const candles: Candle[] = [];
@@ -214,9 +212,7 @@ export function parseCandles(values: unknown): Candle[] {
       high,
       low,
       close,
-      ...(Number.isFinite(volume) && volume >= 0
-        ? { volume }
-        : {}),
+      ...(Number.isFinite(volume) && volume >= 0 ? { volume } : {}),
     });
   }
 
@@ -226,14 +222,11 @@ export function parseCandles(values: unknown): Candle[] {
 
   return candles.filter(
     (candle, index) =>
-      index === 0 ||
-      candle.datetime !== candles[index - 1].datetime
+      index === 0 || candle.datetime !== candles[index - 1].datetime
   );
 }
 
-export function analyzeCandles(
-  candles: Candle[]
-): StrategyResult {
+export function analyzeCandles(candles: Candle[]): StrategyResult {
   if (candles.length < 200) {
     throw new Error(
       `Nuk ka mjaft qirinj per EMA 200. U moren ${candles.length}; duhen te pakten 200.`
@@ -250,14 +243,11 @@ export function analyzeCandles(
   const rsiSeries = calculateRSISeries(closes, 14);
   const atrSeries = calculateATR(candles, 14);
 
-  // MACD standard: EMA 12 - EMA 26, me sinjal EMA 9.
   const macdSeries: (number | null)[] = closes.map((_, index) => {
     const fast = ema12Series[index];
     const slow = ema26Series[index];
 
-    return fast !== null && slow !== null
-      ? fast - slow
-      : null;
+    return fast !== null && slow !== null ? fast - slow : null;
   });
 
   const validMacd = macdSeries.filter(
@@ -265,15 +255,12 @@ export function analyzeCandles(
   );
 
   const macdSignalValues = calculateEMA(validMacd, 9);
-  const macdSignalSeries: (number | null)[] = Array(
-    candles.length
-  ).fill(null);
+  const macdSignalSeries: (number | null)[] = Array(candles.length).fill(null);
 
   let validIndex = 0;
 
   for (let i = 0; i < macdSeries.length; i++) {
     if (macdSeries[i] === null) continue;
-
     macdSignalSeries[i] = macdSignalValues[validIndex];
     validIndex++;
   }
@@ -309,8 +296,6 @@ export function analyzeCandles(
     }
 
     const histogram = macd - macdSignal;
-
-    // Smart Entry: pese kontrolle, secila vlen 20 pike.
     let buyScore = 0;
     let sellScore = 0;
 
@@ -320,19 +305,15 @@ export function analyzeCandles(
     if (candle.close > ema200) buyScore += 20;
     if (candle.close < ema200) sellScore += 20;
 
-    // RSI konfirmon momentumin pa ndjekur levizje ekstreme.
     if (rsi >= 50 && rsi <= 68) buyScore += 20;
     if (rsi >= 32 && rsi < 50) sellScore += 20;
 
-    // MACD dhe linja e sinjalit duhet te jene ne drejtimin perkates.
     if (macd > macdSignal && histogram > 0) buyScore += 20;
     if (macd < macdSignal && histogram < 0) sellScore += 20;
 
-    // Qiriri duhet te konfirmoje drejtimin.
     if (candle.close > previousCandle.close) buyScore += 20;
     if (candle.close < previousCandle.close) sellScore += 20;
 
-    // Kerkohen te pakten 4 nga 5 konfirmimet.
     if (buyScore >= 80 && buyScore > sellScore) return "BUY";
     if (sellScore >= 80 && sellScore > buyScore) return "SELL";
 
@@ -349,7 +330,6 @@ export function analyzeCandles(
   const atr = atrSeries[lastIndex];
 
   const signal = signalAt(lastIndex);
-
   const macd = macdSeries[lastIndex];
   const macdSignal = macdSignalSeries[lastIndex];
 
@@ -357,56 +337,42 @@ export function analyzeCandles(
 
   if (signal !== "WAIT") {
     const previousCandle = candles[lastIndex - 1];
-
     let score = 0;
 
     if (
       signal === "BUY"
         ? ema9 !== null && ema21 !== null && ema9 > ema21
         : ema9 !== null && ema21 !== null && ema9 < ema21
-    ) {
-      score += 20;
-    }
+    ) score += 20;
 
     if (
       signal === "BUY"
         ? ema200 !== null && lastCandle.close > ema200
         : ema200 !== null && lastCandle.close < ema200
-    ) {
-      score += 20;
-    }
+    ) score += 20;
 
     if (
       signal === "BUY"
         ? rsi !== null && rsi >= 50 && rsi <= 68
         : rsi !== null && rsi >= 32 && rsi < 50
-    ) {
-      score += 20;
-    }
+    ) score += 20;
 
     if (
       macd !== null &&
       macdSignal !== null &&
-      (signal === "BUY"
-        ? macd > macdSignal
-        : macd < macdSignal)
-    ) {
-      score += 20;
-    }
+      (signal === "BUY" ? macd > macdSignal : macd < macdSignal)
+    ) score += 20;
 
     if (
       signal === "BUY"
         ? lastCandle.close > previousCandle.close
         : lastCandle.close < previousCandle.close
-    ) {
-      score += 20;
-    }
+    ) score += 20;
 
     confidence = score;
   }
 
-  const stopDistance =
-    atr !== null && atr > 0 ? atr * 1.5 : null;
+  const stopDistance = atr !== null && atr > 0 ? atr * 1.5 : null;
 
   const stopLoss =
     signal !== "WAIT" && stopDistance !== null
@@ -420,9 +386,7 @@ export function analyzeCandles(
     signal !== "WAIT" && stopDistance !== null
       ? roundPrice(
           lastCandle.close +
-            (signal === "BUY"
-              ? stopDistance * 2
-              : -stopDistance * 2)
+            (signal === "BUY" ? stopDistance * 2 : -stopDistance * 2)
         )
       : null;
 
@@ -431,10 +395,10 @@ export function analyzeCandles(
 
   if (signal === "BUY") {
     reason =
-      "Smart Entry BUY: trendi, RSI, MACD dhe levizja e cmimit japin te pakten 4 konfirmime.";
+      `Smart Entry BUY: ${confidence}% e pikeve te konfirmimit jane plotesuar.`;
   } else if (signal === "SELL") {
     reason =
-      "Smart Entry SELL: trendi, RSI, MACD dhe levizja e cmimit japin te pakten 4 konfirmime.";
+      `Smart Entry SELL: ${confidence}% e pikeve te konfirmimit jane plotesuar.`;
   }
 
   return {
@@ -444,13 +408,12 @@ export function analyzeCandles(
     confidence,
     stopLoss,
     takeProfit,
-    riskReward:
-      stopLoss !== null && takeProfit !== null ? 2 : 0,
-    rsi,
-    ema9,
-    ema21,
-    ema200,
-    atr,
+    riskReward: stopLoss !== null && takeProfit !== null ? 2 : 0,
+    rsi: roundIndicator(rsi),
+    ema9: roundIndicator(ema9),
+    ema21: roundIndicator(ema21),
+    ema200: roundIndicator(ema200),
+    atr: roundIndicator(atr),
     reason,
     timestamp: lastCandle.datetime,
     signalAt,
