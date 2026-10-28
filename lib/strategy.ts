@@ -28,6 +28,13 @@ export type StrategyResult = {
   signalAt: (index: number) => TradeSignal;
 };
 
+const isValidNumber = (value: number) =>
+  Number.isFinite(value);
+
+function roundPrice(value: number): number {
+  return Number(value.toFixed(3));
+}
+
 export function calculateEMA(
   values: number[],
   period: number
@@ -37,7 +44,8 @@ export function calculateEMA(
   if (
     !Number.isInteger(period) ||
     period < 1 ||
-    values.length < period
+    values.length < period ||
+    values.some((value) => !isValidNumber(value))
   ) {
     return result;
   }
@@ -83,11 +91,8 @@ export function calculateRSISeries(
   for (let i = 1; i <= period; i++) {
     const change = values[i] - values[i - 1];
 
-    if (change > 0) {
-      averageGain += change;
-    } else {
-      averageLoss += Math.abs(change);
-    }
+    averageGain += Math.max(change, 0);
+    averageLoss += Math.max(-change, 0);
   }
 
   averageGain /= period;
@@ -98,22 +103,22 @@ export function calculateRSISeries(
     if (loss === 0) return 100;
     if (gain === 0) return 0;
 
-    const relativeStrength = gain / loss;
-    return 100 - 100 / (1 + relativeStrength);
+    const rs = gain / loss;
+    return 100 - 100 / (1 + rs);
   };
 
   result[period] = getRSI(averageGain, averageLoss);
 
   for (let i = period + 1; i < values.length; i++) {
     const change = values[i] - values[i - 1];
-    const gain = Math.max(change, 0);
-    const loss = Math.max(-change, 0);
 
     averageGain =
-      (averageGain * (period - 1) + gain) / period;
+      (averageGain * (period - 1) + Math.max(change, 0)) /
+      period;
 
     averageLoss =
-      (averageLoss * (period - 1) + loss) / period;
+      (averageLoss * (period - 1) + Math.max(-change, 0)) /
+      period;
 
     result[i] = getRSI(averageGain, averageLoss);
   }
@@ -135,22 +140,16 @@ export function calculateATR(
     return result;
   }
 
-  const trueRanges: number[] = [];
-
-  for (let i = 0; i < candles.length; i++) {
-    const candle = candles[i];
-
+  const trueRanges = candles.map((candle, index) => {
     const previousClose =
-      i > 0 ? candles[i - 1].close : candle.close;
+      index > 0 ? candles[index - 1].close : candle.close;
 
-    const trueRange = Math.max(
+    return Math.max(
       candle.high - candle.low,
       Math.abs(candle.high - previousClose),
       Math.abs(candle.low - previousClose)
     );
-
-    trueRanges.push(trueRange);
-  }
+  });
 
   let atr = 0;
 
@@ -171,7 +170,9 @@ export function calculateATR(
 
 export function parseCandles(values: unknown): Candle[] {
   if (!Array.isArray(values)) {
-    throw new Error("Te dhenat e qirinjve nga Twelve Data nuk jane valide.");
+    throw new Error(
+      "Te dhenat e qirinjve nga Twelve Data nuk jane valide."
+    );
   }
 
   const candles: Candle[] = [];
@@ -180,7 +181,6 @@ export function parseCandles(values: unknown): Candle[] {
     if (!item || typeof item !== "object") continue;
 
     const row = item as Record<string, unknown>;
-
     const datetime = String(row.datetime ?? "");
     const open = Number(row.open);
     const high = Number(row.high);
@@ -189,6 +189,7 @@ export function parseCandles(values: unknown): Candle[] {
 
     const valid =
       datetime.length > 0 &&
+      Number.isFinite(Date.parse(datetime)) &&
       Number.isFinite(open) &&
       Number.isFinite(high) &&
       Number.isFinite(low) &&
@@ -197,11 +198,15 @@ export function parseCandles(values: unknown): Candle[] {
       high > 0 &&
       low > 0 &&
       close > 0 &&
-      high >= low;
+      high >= low &&
+      high >= open &&
+      high >= close &&
+      low <= open &&
+      low <= close;
 
     if (!valid) continue;
 
-    const volumeValue = Number(row.volume);
+    const volume = Number(row.volume);
 
     candles.push({
       datetime,
@@ -209,26 +214,16 @@ export function parseCandles(values: unknown): Candle[] {
       high,
       low,
       close,
-      ...(Number.isFinite(volumeValue) && volumeValue >= 0
-        ? { volume: volumeValue }
+      ...(Number.isFinite(volume) && volume >= 0
+        ? { volume }
         : {}),
     });
   }
 
-  // Twelve Data zakonisht i kthen qirinjt nga me i riu te me i vjetri.
-  // Backtest-i ka nevoje per rend kronologjik.
-  candles.sort((a, b) => {
-    const timeA = Date.parse(a.datetime);
-    const timeB = Date.parse(b.datetime);
+  candles.sort(
+    (a, b) => Date.parse(a.datetime) - Date.parse(b.datetime)
+  );
 
-    if (Number.isFinite(timeA) && Number.isFinite(timeB)) {
-      return timeA - timeB;
-    }
-
-    return a.datetime.localeCompare(b.datetime);
-  });
-
-  // Hiq qirinjte e dyfishte me te njejten kohe.
   return candles.filter(
     (candle, index) =>
       index === 0 ||
@@ -236,7 +231,9 @@ export function parseCandles(values: unknown): Candle[] {
   );
 }
 
-export function analyzeCandles(candles: Candle[]): StrategyResult {
+export function analyzeCandles(
+  candles: Candle[]
+): StrategyResult {
   if (candles.length < 200) {
     throw new Error(
       `Nuk ka mjaft qirinj per EMA 200. U moren ${candles.length}; duhen te pakten 200.`
@@ -244,16 +241,47 @@ export function analyzeCandles(candles: Candle[]): StrategyResult {
   }
 
   const closes = candles.map((candle) => candle.close);
+
   const ema9Series = calculateEMA(closes, 9);
   const ema21Series = calculateEMA(closes, 21);
+  const ema12Series = calculateEMA(closes, 12);
+  const ema26Series = calculateEMA(closes, 26);
   const ema200Series = calculateEMA(closes, 200);
   const rsiSeries = calculateRSISeries(closes, 14);
   const atrSeries = calculateATR(candles, 14);
 
+  // MACD standard: EMA 12 - EMA 26, me sinjal EMA 9.
+  const macdSeries: (number | null)[] = closes.map((_, index) => {
+    const fast = ema12Series[index];
+    const slow = ema26Series[index];
+
+    return fast !== null && slow !== null
+      ? fast - slow
+      : null;
+  });
+
+  const validMacd = macdSeries.filter(
+    (value): value is number => value !== null
+  );
+
+  const macdSignalValues = calculateEMA(validMacd, 9);
+  const macdSignalSeries: (number | null)[] = Array(
+    candles.length
+  ).fill(null);
+
+  let validIndex = 0;
+
+  for (let i = 0; i < macdSeries.length; i++) {
+    if (macdSeries[i] === null) continue;
+
+    macdSignalSeries[i] = macdSignalValues[validIndex];
+    validIndex++;
+  }
+
   function signalAt(index: number): TradeSignal {
     if (
       !Number.isInteger(index) ||
-      index < 200 ||
+      index < 199 ||
       index >= candles.length
     ) {
       return "WAIT";
@@ -266,37 +294,47 @@ export function analyzeCandles(candles: Candle[]): StrategyResult {
     const ema21 = ema21Series[index];
     const ema200 = ema200Series[index];
     const rsi = rsiSeries[index];
+    const macd = macdSeries[index];
+    const macdSignal = macdSignalSeries[index];
 
     if (
       ema9 === null ||
       ema21 === null ||
       ema200 === null ||
-      rsi === null
+      rsi === null ||
+      macd === null ||
+      macdSignal === null
     ) {
       return "WAIT";
     }
 
+    const histogram = macd - macdSignal;
+
+    // Smart Entry: pese kontrolle, secila vlen 20 pike.
     let buyScore = 0;
     let sellScore = 0;
 
-    // Drejtimi afatshkurter.
-    if (ema9 > ema21) buyScore += 25;
-    if (ema9 < ema21) sellScore += 25;
+    if (ema9 > ema21) buyScore += 20;
+    if (ema9 < ema21) sellScore += 20;
 
-    // Filtri i trendit me EMA 200.
-    if (candle.close > ema200) buyScore += 25;
-    if (candle.close < ema200) sellScore += 25;
+    if (candle.close > ema200) buyScore += 20;
+    if (candle.close < ema200) sellScore += 20;
 
-    // RSI 14: shmang blerjen ne zona shume te mbinxehura.
-    if (rsi >= 50 && rsi <= 70) buyScore += 25;
-    if (rsi >= 30 && rsi < 50) sellScore += 25;
+    // RSI konfirmon momentumin pa ndjekur levizje ekstreme.
+    if (rsi >= 50 && rsi <= 68) buyScore += 20;
+    if (rsi >= 32 && rsi < 50) sellScore += 20;
 
-    // Konfirmimi nga qiriri i fundit.
-    if (candle.close > previousCandle.close) buyScore += 25;
-    if (candle.close < previousCandle.close) sellScore += 25;
+    // MACD dhe linja e sinjalit duhet te jene ne drejtimin perkates.
+    if (macd > macdSignal && histogram > 0) buyScore += 20;
+    if (macd < macdSignal && histogram < 0) sellScore += 20;
 
-    if (buyScore >= 75 && buyScore > sellScore) return "BUY";
-    if (sellScore >= 75 && sellScore > buyScore) return "SELL";
+    // Qiriri duhet te konfirmoje drejtimin.
+    if (candle.close > previousCandle.close) buyScore += 20;
+    if (candle.close < previousCandle.close) sellScore += 20;
+
+    // Kerkohen te pakten 4 nga 5 konfirmimet.
+    if (buyScore >= 80 && buyScore > sellScore) return "BUY";
+    if (sellScore >= 80 && sellScore > buyScore) return "SELL";
 
     return "WAIT";
   }
@@ -312,60 +350,102 @@ export function analyzeCandles(candles: Candle[]): StrategyResult {
 
   const signal = signalAt(lastIndex);
 
-  const confidence =
-    signal === "BUY"
-      ? calculateConfidence(
-          ema9,
-          ema21,
-          ema200,
-          rsi,
-          lastCandle.close,
-          lastCandle.close > candles[lastIndex - 1].close,
-          "BUY"
-        )
-      : signal === "SELL"
-        ? calculateConfidence(
-            ema9,
-            ema21,
-            ema200,
-            rsi,
-            lastCandle.close,
-            lastCandle.close < candles[lastIndex - 1].close,
-            "SELL"
-          )
-        : 0;
+  const macd = macdSeries[lastIndex];
+  const macdSignal = macdSignalSeries[lastIndex];
+
+  let confidence = 0;
+
+  if (signal !== "WAIT") {
+    const previousCandle = candles[lastIndex - 1];
+
+    let score = 0;
+
+    if (
+      signal === "BUY"
+        ? ema9 !== null && ema21 !== null && ema9 > ema21
+        : ema9 !== null && ema21 !== null && ema9 < ema21
+    ) {
+      score += 20;
+    }
+
+    if (
+      signal === "BUY"
+        ? ema200 !== null && lastCandle.close > ema200
+        : ema200 !== null && lastCandle.close < ema200
+    ) {
+      score += 20;
+    }
+
+    if (
+      signal === "BUY"
+        ? rsi !== null && rsi >= 50 && rsi <= 68
+        : rsi !== null && rsi >= 32 && rsi < 50
+    ) {
+      score += 20;
+    }
+
+    if (
+      macd !== null &&
+      macdSignal !== null &&
+      (signal === "BUY"
+        ? macd > macdSignal
+        : macd < macdSignal)
+    ) {
+      score += 20;
+    }
+
+    if (
+      signal === "BUY"
+        ? lastCandle.close > previousCandle.close
+        : lastCandle.close < previousCandle.close
+    ) {
+      score += 20;
+    }
+
+    confidence = score;
+  }
 
   const stopDistance =
-    atr !== null && Number.isFinite(atr) ? atr * 1.5 : null;
+    atr !== null && atr > 0 ? atr * 1.5 : null;
 
   const stopLoss =
     signal !== "WAIT" && stopDistance !== null
-      ? lastCandle.close +
-        (signal === "BUY" ? -stopDistance : stopDistance)
+      ? roundPrice(
+          lastCandle.close +
+            (signal === "BUY" ? -stopDistance : stopDistance)
+        )
       : null;
 
   const takeProfit =
     signal !== "WAIT" && stopDistance !== null
-      ? lastCandle.close +
-        (signal === "BUY" ? stopDistance * 2 : -stopDistance * 2)
+      ? roundPrice(
+          lastCandle.close +
+            (signal === "BUY"
+              ? stopDistance * 2
+              : -stopDistance * 2)
+        )
       : null;
 
-  let reason = "Nuk ka konfirmim te mjaftueshem nga EMA dhe RSI.";
+  let reason =
+    "WAIT: Nuk ka te pakten 4 konfirmime nga EMA, RSI, MACD dhe qiriri.";
 
   if (signal === "BUY") {
-    reason = "BUY: EMA, RSI dhe drejtimi i qiririt japin konfirmim.";
+    reason =
+      "Smart Entry BUY: trendi, RSI, MACD dhe levizja e cmimit japin te pakten 4 konfirmime.";
   } else if (signal === "SELL") {
-    reason = "SELL: EMA, RSI dhe drejtimi i qiririt japin konfirmim.";
+    reason =
+      "Smart Entry SELL: trendi, RSI, MACD dhe levizja e cmimit japin te pakten 4 konfirmime.";
   }
 
   return {
     signal,
     action: signal,
-    price: lastCandle.close,
+    price: roundPrice(lastCandle.close),
     confidence,
     stopLoss,
     takeProfit,
-    riskReward: stopLoss !== null && takeProfit !== null ? 2 : 0,
+    riskReward:
+      stopLoss !== null && takeProfit !== null ? 2 : 0,
     rsi,
     ema9,
     ema21,
@@ -375,53 +455,4 @@ export function analyzeCandles(candles: Candle[]): StrategyResult {
     timestamp: lastCandle.datetime,
     signalAt,
   };
-}
-
-function calculateConfidence(
-  ema9: number | null,
-  ema21: number | null,
-  ema200: number | null,
-  rsi: number | null,
-  price: number,
-  candleConfirms: boolean,
-  direction: "BUY" | "SELL"
-): number {
-  if (
-    ema9 === null ||
-    ema21 === null ||
-    ema200 === null ||
-    rsi === null
-  ) {
-    return 0;
-  }
-
-  let score = 0;
-
-  if (
-    direction === "BUY"
-      ? ema9 > ema21
-      : ema9 < ema21
-  ) {
-    score += 25;
-  }
-
-  if (
-    direction === "BUY"
-      ? price > ema200
-      : price < ema200
-  ) {
-    score += 25;
-  }
-
-  if (
-    direction === "BUY"
-      ? rsi >= 50 && rsi <= 70
-      : rsi >= 30 && rsi < 50
-  ) {
-    score += 25;
-  }
-
-  if (candleConfirms) score += 25;
-
-  return score;
 }
