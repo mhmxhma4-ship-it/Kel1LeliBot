@@ -458,18 +458,17 @@ const timeZones = [
 ];
 
 const C = {
-  bg: "#08090b",
-  panel: "#101114",
-  panel2: "#151619",
-  border: "rgba(212,175,55,0.18)",
-  gold: "#d4af37",
-  gold2: "#f2d675",
-  text: "#f4f0e6",
-  muted: "#92939a",
-  green: "#31d69a",
+  bg: "#050706",
+  panel: "#0b100d",
+  panel2: "#101812",
+  border: "rgba(57,255,136,0.20)",
+  gold: "#39ff88",
+  gold2: "#7dffad",
+  text: "#f2fff6",
+  muted: "#899b8f",
+  green: "#39ff88",
   red: "#ff6577",
 };
-
 const panel: React.CSSProperties = {
   background: "linear-gradient(145deg, #131417, #0d0e10)",
   border: `1px solid ${C.border}`,
