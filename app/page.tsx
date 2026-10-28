@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
@@ -62,7 +61,6 @@ const en: Record<string, string> = {
   entryTime: "Entry time",
   exit: "Exit",
   exitTime: "Exit time",
-  result: "Result",
   return: "Return",
   noTrades: "No trades to display",
   reason: "Reason",
@@ -76,9 +74,6 @@ const en: Record<string, string> = {
   buy: "BUY",
   sell: "SELL",
   wait: "WAIT",
-  win: "WIN",
-  loss: "LOSS",
-  breakeven: "BREAKEVEN",
   errorSignal: "Signal error",
   errorBacktest: "Backtest error",
   loadingStats: "Calculating...",
@@ -89,31 +84,30 @@ const en: Record<string, string> = {
 const translations: Partial<Record<Lang, Record<string, string>>> = {
   sq: {
     menu: "Menuja", language: "Gjuha", timezone: "Zona kohore",
-    chooseLanguage: "Zgjidh gjuhen", chooseZone: "Zgjidh zonen kohore",
+    chooseLanguage: "Zgjidh gjuhën", chooseZone: "Zgjidh zonën kohore",
     done: "U krye", active: "Sistemi aktiv",
-    auto: "Rifreskim automatik cdo 60 sekonda",
+    auto: "Rifreskim automatik çdo 60 sekonda",
     currentSignal: "Sinjali aktual", marketAnalysis: "Analiza e fundit e tregut",
-    currentPrice: "CMIMI AKTUAL", buySignal: "Sinjal per blerje",
-    sellSignal: "Sinjal per shitje", waiting: "Ne pritje te nje konfigurimi",
+    currentPrice: "ÇMIMI AKTUAL", buySignal: "Sinjal për blerje",
+    sellSignal: "Sinjal për shitje", waiting: "Në pritje të një konfigurimi",
     loading: "Duke ngarkuar...", refreshSignal: "Rifresko sinjalin",
     performance: "Performanca", backtest: "Backtest automatik",
-    strategyStats: "Statistikat e strategjise", recalculate: "Rillogarit",
+    strategyStats: "Statistikat e strategjisë", recalculate: "Rillogarit",
     trades: "Tregtime", winRate: "Win rate", profitFactor: "Profit factor",
     netReturn: "Kthimi neto", drawdown: "Max drawdown",
     finalCapital: "Kapitali final", startingCapital: "KAPITALI FILLESTAR",
     lastBacktest: "BACKTEST-I I FUNDIT", history: "Historiku",
     recentTrades: "Tregtimet e fundit", direction: "Drejtimi",
     entry: "Hyrja", entryTime: "Ora e hyrjes", exit: "Dalja",
-    exitTime: "Ora e daljes", result: "Rezultati", return: "Kthimi",
-    noTrades: "Nuk ka tregtime per tu shfaqur", reason: "Arsyeja",
-    signalTime: "Koha e sinjalit", updated: "Perditesuar",
+    exitTime: "Ora e daljes", return: "Kthimi",
+    noTrades: "Nuk ka tregtime për t'u shfaqur", reason: "Arsyeja",
+    signalTime: "Koha e sinjalit", updated: "Përditësuar",
     localTime: "Ora lokale", activeZone: "ZONA KOHORE AKTIVE",
-    shortTerm: "Afatshkurter", mediumTerm: "Afatmesem", trend: "Tendenca",
-    buy: "BLERJE", sell: "SHITJE", wait: "NE PRITJE",
-    win: "FITORE", loss: "HUMBJE", breakeven: "BARAZIM",
+    shortTerm: "Afatshkurtër", mediumTerm: "Afatmesëm", trend: "Tendenca",
+    buy: "BLERJE", sell: "SHITJE", wait: "NË PRITJE",
     errorSignal: "Gabim sinjali", errorBacktest: "Gabim backtest-i",
-    loadingStats: "Duke llogaritur...", noSignal: "Nuk ka te dhena per sinjalin",
-    systemTime: "Ora perditesohet automatikisht",
+    loadingStats: "Duke llogaritur...", noSignal: "Nuk ka të dhëna për sinjalin",
+    systemTime: "Ora përditësohet automatikisht",
   },
   el: {
     menu: "Μενού", language: "Γλώσσα", timezone: "Ζώνη ώρας",
@@ -132,13 +126,12 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     startingCapital: "ΑΡΧΙΚΟ ΚΕΦΑΛΑΙΟ", lastBacktest: "ΤΕΛΕΥΤΑΙΟ BACKTEST",
     history: "Ιστορικό", recentTrades: "Πρόσφατες συναλλαγές",
     direction: "Κατεύθυνση", entry: "Είσοδος", entryTime: "Ώρα εισόδου",
-    exit: "Έξοδος", exitTime: "Ώρα εξόδου", result: "Αποτέλεσμα",
+    exit: "Έξοδος", exitTime: "Ώρα εξόδου",
     return: "Απόδοση", noTrades: "Δεν υπάρχουν συναλλαγές",
     reason: "Αιτία", signalTime: "Ώρα σήματος", updated: "Ενημερώθηκε",
     localTime: "Τοπική ώρα", activeZone: "ΕΝΕΡΓΗ ΖΩΝΗ ΩΡΑΣ",
     shortTerm: "Βραχυπρόθεσμα", mediumTerm: "Μεσοπρόθεσμα", trend: "Τάση",
     buy: "ΑΓΟΡΑ", sell: "ΠΩΛΗΣΗ", wait: "ΑΝΑΜΟΝΗ",
-    win: "ΚΕΡΔΟΣ", loss: "ΖΗΜΙΑ", breakeven: "ΙΣΟΠΑΛΙΑ",
     errorSignal: "Σφάλμα σήματος", errorBacktest: "Σφάλμα backtest",
     loadingStats: "Υπολογισμός...", noSignal: "Δεν υπάρχουν δεδομένα σήματος",
     systemTime: "Το ρολόι ενημερώνεται αυτόματα",
@@ -160,13 +153,12 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     startingCapital: "CAPITALE INIZIALE", lastBacktest: "ULTIMO BACKTEST",
     history: "Cronologia", recentTrades: "Operazioni recenti",
     direction: "Direzione", entry: "Entrata", entryTime: "Ora di entrata",
-    exit: "Uscita", exitTime: "Ora di uscita", result: "Risultato",
+    exit: "Uscita", exitTime: "Ora di uscita",
     return: "Rendimento", noTrades: "Nessuna operazione da mostrare",
     reason: "Motivo", signalTime: "Ora del segnale", updated: "Aggiornato",
     localTime: "Ora locale", activeZone: "FUSO ORARIO ATTIVO",
     shortTerm: "Breve termine", mediumTerm: "Medio termine", trend: "Tendenza",
     buy: "ACQUISTA", sell: "VENDI", wait: "ATTENDI",
-    win: "VITTORIA", loss: "PERDITA", breakeven: "PAREGGIO",
     errorSignal: "Errore segnale", errorBacktest: "Errore backtest",
     loadingStats: "Calcolo...", noSignal: "Nessun dato del segnale disponibile",
     systemTime: "L'orologio si aggiorna automaticamente",
@@ -188,13 +180,12 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     startingCapital: "CAPITAL INICIAL", lastBacktest: "ÚLTIMO BACKTEST",
     history: "Historial", recentTrades: "Operaciones recientes",
     direction: "Dirección", entry: "Entrada", entryTime: "Hora de entrada",
-    exit: "Salida", exitTime: "Hora de salida", result: "Resultado",
+    exit: "Salida", exitTime: "Hora de salida",
     return: "Retorno", noTrades: "No hay operaciones para mostrar",
     reason: "Motivo", signalTime: "Hora de la señal", updated: "Actualizado",
     localTime: "Hora local", activeZone: "ZONA HORARIA ACTIVA",
     shortTerm: "Corto plazo", mediumTerm: "Medio plazo", trend: "Tendencia",
     buy: "COMPRAR", sell: "VENDER", wait: "ESPERAR",
-    win: "GANANCIA", loss: "PÉRDIDA", breakeven: "EMPATE",
     errorSignal: "Error de señal", errorBacktest: "Error de backtest",
     loadingStats: "Calculando...", noSignal: "No hay datos de señal disponibles",
     systemTime: "El reloj se actualiza automáticamente",
@@ -216,13 +207,12 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     startingCapital: "CAPITAL INICIAL", lastBacktest: "ÚLTIMO BACKTEST",
     history: "Histórico", recentTrades: "Operações recentes",
     direction: "Direção", entry: "Entrada", entryTime: "Hora de entrada",
-    exit: "Saída", exitTime: "Hora de saída", result: "Resultado",
+    exit: "Saída", exitTime: "Hora de saída",
     return: "Retorno", noTrades: "Nenhuma operação para exibir",
     reason: "Motivo", signalTime: "Hora do sinal", updated: "Atualizado",
     localTime: "Hora local", activeZone: "FUSO HORÁRIO ATIVO",
     shortTerm: "Curto prazo", mediumTerm: "Médio prazo", trend: "Tendência",
     buy: "COMPRAR", sell: "VENDER", wait: "AGUARDAR",
-    win: "VITÓRIA", loss: "PERDA", breakeven: "EMPATE",
     errorSignal: "Erro no sinal", errorBacktest: "Erro no backtest",
     loadingStats: "Calculando...", noSignal: "Nenhum dado de sinal disponível",
     systemTime: "O relógio é atualizado automaticamente",
@@ -244,13 +234,12 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     startingCapital: "CAPITAL INITIAL", lastBacktest: "DERNIER BACKTEST",
     history: "Historique", recentTrades: "Transactions récentes",
     direction: "Direction", entry: "Entrée", entryTime: "Heure d'entrée",
-    exit: "Sortie", exitTime: "Heure de sortie", result: "Résultat",
+    exit: "Sortie", exitTime: "Heure de sortie",
     return: "Rendement", noTrades: "Aucune transaction à afficher",
     reason: "Raison", signalTime: "Heure du signal", updated: "Mis à jour",
     localTime: "Heure locale", activeZone: "FUSEAU HORAIRE ACTIF",
     shortTerm: "Court terme", mediumTerm: "Moyen terme", trend: "Tendance",
     buy: "ACHAT", sell: "VENTE", wait: "ATTENTE",
-    win: "GAIN", loss: "PERTE", breakeven: "ÉGALITÉ",
     errorSignal: "Erreur de signal", errorBacktest: "Erreur de backtest",
     loadingStats: "Calcul...", noSignal: "Aucune donnée de signal disponible",
     systemTime: "L'horloge se met à jour automatiquement",
@@ -272,12 +261,11 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     lastBacktest: "LETZTER BACKTEST", history: "Verlauf",
     recentTrades: "Letzte Trades", direction: "Richtung", entry: "Einstieg",
     entryTime: "Einstiegszeit", exit: "Ausstieg", exitTime: "Ausstiegszeit",
-    result: "Ergebnis", return: "Rendite", noTrades: "Keine Trades vorhanden",
+    return: "Rendite", noTrades: "Keine Trades vorhanden",
     reason: "Grund", signalTime: "Signalzeit", updated: "Aktualisiert",
     localTime: "Ortszeit", activeZone: "AKTIVE ZEITZONE",
     shortTerm: "Kurzfristig", mediumTerm: "Mittelfristig", trend: "Trend",
     buy: "KAUFEN", sell: "VERKAUFEN", wait: "WARTEN",
-    win: "GEWINN", loss: "VERLUST", breakeven: "AUSGEGLICHEN",
     errorSignal: "Signalfehler", errorBacktest: "Backtest-Fehler",
     loadingStats: "Berechnung...", noSignal: "Keine Signaldaten verfügbar",
     systemTime: "Uhrzeit wird automatisch aktualisiert",
@@ -299,12 +287,11 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     lastBacktest: "SON BACKTEST", history: "Geçmiş",
     recentTrades: "Son işlemler", direction: "Yön", entry: "Giriş",
     entryTime: "Giriş zamanı", exit: "Çıkış", exitTime: "Çıkış zamanı",
-    result: "Sonuç", return: "Getiri", noTrades: "Gösterilecek işlem yok",
+    return: "Getiri", noTrades: "Gösterilecek işlem yok",
     reason: "Neden", signalTime: "Sinyal zamanı", updated: "Güncellendi",
     localTime: "Yerel saat", activeZone: "ETKİN SAAT DİLİMİ",
     shortTerm: "Kısa vadeli", mediumTerm: "Orta vadeli", trend: "Trend",
     buy: "AL", sell: "SAT", wait: "BEKLE",
-    win: "KAZANÇ", loss: "KAYIP", breakeven: "BAŞABAŞ",
     errorSignal: "Sinyal hatası", errorBacktest: "Backtest hatası",
     loadingStats: "Hesaplanıyor...", noSignal: "Sinyal verisi bulunamadı",
     systemTime: "Saat otomatik güncellenir",
@@ -325,13 +312,12 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     finalCapital: "رأس المال النهائي", startingCapital: "رأس المال الأولي",
     lastBacktest: "آخر اختبار", history: "السجل", recentTrades: "الصفقات الأخيرة",
     direction: "الاتجاه", entry: "الدخول", entryTime: "وقت الدخول",
-    exit: "الخروج", exitTime: "وقت الخروج", result: "النتيجة",
+    exit: "الخروج", exitTime: "وقت الخروج",
     return: "العائد", noTrades: "لا توجد صفقات للعرض",
     reason: "السبب", signalTime: "وقت الإشارة", updated: "تم التحديث",
     localTime: "الوقت المحلي", activeZone: "المنطقة الزمنية النشطة",
     shortTerm: "قصير المدى", mediumTerm: "متوسط المدى", trend: "الاتجاه",
     buy: "شراء", sell: "بيع", wait: "انتظار",
-    win: "ربح", loss: "خسارة", breakeven: "تعادل",
     errorSignal: "خطأ في الإشارة", errorBacktest: "خطأ في الاختبار",
     loadingStats: "جار الحساب...", noSignal: "لا توجد بيانات للإشارة",
     systemTime: "يتم تحديث الساعة تلقائيًا",
@@ -353,13 +339,12 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     lastBacktest: "ПОСЛЕДНИЙ БЭКТЕСТ", history: "История",
     recentTrades: "Последние сделки", direction: "Направление",
     entry: "Вход", entryTime: "Время входа", exit: "Выход",
-    exitTime: "Время выхода", result: "Результат", return: "Доходность",
+    exitTime: "Время выхода", return: "Доходность",
     noTrades: "Нет сделок для отображения", reason: "Причина",
     signalTime: "Время сигнала", updated: "Обновлено",
     localTime: "Местное время", activeZone: "АКТИВНЫЙ ЧАСОВОЙ ПОЯС",
     shortTerm: "Краткосрочный", mediumTerm: "Среднесрочный", trend: "Тренд",
     buy: "ПОКУПКА", sell: "ПРОДАЖА", wait: "ОЖИДАНИЕ",
-    win: "ПРИБЫЛЬ", loss: "УБЫТОК", breakeven: "БЕЗ УБЫТКА",
     errorSignal: "Ошибка сигнала", errorBacktest: "Ошибка бэктеста",
     loadingStats: "Расчёт...", noSignal: "Нет данных сигнала",
     systemTime: "Время обновляется автоматически",
@@ -381,13 +366,12 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     lastBacktest: "ÚLTIMO BACKTEST", history: "Histórico",
     recentTrades: "Operações recentes", direction: "Direção",
     entry: "Entrada", entryTime: "Horário de entrada", exit: "Saída",
-    exitTime: "Horário de saída", result: "Resultado", return: "Retorno",
+    exitTime: "Horário de saída", return: "Retorno",
     noTrades: "Nenhuma operação para exibir", reason: "Motivo",
     signalTime: "Horário do sinal", updated: "Atualizado",
     localTime: "Hora local", activeZone: "FUSO HORÁRIO ATIVO",
     shortTerm: "Curto prazo", mediumTerm: "Médio prazo", trend: "Tendência",
     buy: "COMPRAR", sell: "VENDER", wait: "AGUARDAR",
-    win: "LUCRO", loss: "PERDA", breakeven: "EMPATE",
     errorSignal: "Erro no sinal", errorBacktest: "Erro no backtest",
     loadingStats: "Calculando...", noSignal: "Nenhum dado de sinal disponível",
     systemTime: "O relógio é atualizado automaticamente",
@@ -408,13 +392,13 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     startingCapital: "初期資金", lastBacktest: "最終バックテスト",
     history: "履歴", recentTrades: "最近の取引", direction: "方向",
     entry: "エントリー", entryTime: "エントリー時刻", exit: "決済",
-    exitTime: "決済時刻", result: "結果", return: "リターン",
+    exitTime: "決済時刻", return: "リターン",
     noTrades: "表示する取引はありません", reason: "理由",
     signalTime: "シグナル時刻", updated: "更新済み",
     localTime: "現地時間", activeZone: "使用中のタイムゾーン",
     shortTerm: "短期", mediumTerm: "中期", trend: "トレンド",
-    buy: "買い", sell: "売り", wait: "待機", win: "勝ち",
-    loss: "負け", breakeven: "引き分け", errorSignal: "シグナルエラー",
+    buy: "買い", sell: "売り", wait: "待機",
+    errorSignal: "シグナルエラー",
     errorBacktest: "バックテストエラー", loadingStats: "計算中...",
     noSignal: "シグナルデータがありません", systemTime: "時計は自動更新されます",
   },
@@ -434,12 +418,12 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     startingCapital: "初始资金", lastBacktest: "最近回测",
     history: "历史记录", recentTrades: "最近交易", direction: "方向",
     entry: "入场价", entryTime: "入场时间", exit: "出场价",
-    exitTime: "出场时间", result: "结果", return: "收益",
+    exitTime: "出场时间", return: "收益",
     noTrades: "暂无交易记录", reason: "原因", signalTime: "信号时间",
     updated: "已更新", localTime: "当地时间", activeZone: "当前时区",
     shortTerm: "短期", mediumTerm: "中期", trend: "趋势",
-    buy: "买入", sell: "卖出", wait: "等待", win: "盈利",
-    loss: "亏损", breakeven: "持平", errorSignal: "信号错误",
+    buy: "买入", sell: "卖出", wait: "等待",
+    errorSignal: "信号错误",
     errorBacktest: "回测错误", loadingStats: "计算中...",
     noSignal: "暂无信号数据", systemTime: "时钟自动更新",
   },
@@ -764,23 +748,6 @@ export default function Home() {
       tradeValue(trade, "pnlPct", "netPct", "netReturnPct", "returnPct", "return_pct")
     );
 
-  const tradeResult = (trade: Data) => {
-    const explicit = String(tradeValue(trade, "result", "status") ?? "").toUpperCase();
-
-    if (explicit.includes("WIN") || explicit.includes("PROFIT")) return t("win");
-    if (explicit.includes("LOSS") || explicit.includes("LOSE")) return t("loss");
-
-    const ret = tradeReturn(trade);
-
-    if (ret !== null) {
-      if (ret > 0) return t("win");
-      if (ret < 0) return t("loss");
-      return t("breakeven");
-    }
-
-    return explicit || "—";
-  };
-
   const thStyle: React.CSSProperties = {
     textAlign: "left",
     color: C.muted,
@@ -832,74 +799,72 @@ export default function Home() {
             marginBottom: 22,
           }}
         >
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            
-<svg
-  width="58"
-  height="58"
-  viewBox="0 0 100 100"
-  fill="none"
-  xmlns="http://www.w3.org/2000/svg"
-  style={{
-    flexShrink: 0,
-    filter: "drop-shadow(0 0 9px rgba(57,255,136,0.45))",
-  }}
->
-  <defs>
-    <linearGradient id="kl-neon" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0%" stopColor="#7DFFAD" />
-      <stop offset="100%" stopColor="#39FF88" />
-    </linearGradient>
-  </defs>
-  <rect
-    x="3"
-    y="3"
-    width="94"
-    height="94"
-    rx="24"
-    fill="#050706"
-    stroke="#39FF88"
-    strokeWidth="2"
-  />
-  <path
-    d="M50 13V22M43 13H57"
-    stroke="#39FF88"
-    strokeWidth="3"
-    strokeLinecap="round"
-  />
-  <path
-    d="M25 39Q25 29 36 29H64Q75 29 75 39V59Q75 69 64 69H36Q25 69 25 59Z"
-    fill="#101812"
-    stroke="url(#kl-neon)"
-    strokeWidth="2.5"
-  />
-  <rect x="34" y="40" width="11" height="11" rx="3" fill="#39FF88" />
-  <rect x="55" y="40" width="11" height="11" rx="3" fill="#39FF88" />
-  <path
-    d="M39 59H61"
-    stroke="#7DFFAD"
-    strokeWidth="3"
-    strokeLinecap="round"
-  />
-  <path
-    d="M18 42H25M75 42H82M18 55H25M75 55H82"
-    stroke="#39FF88"
-    strokeWidth="2.5"
-    strokeLinecap="round"
-  />
-  <text
-    x="50"
-    y="86"
-    textAnchor="middle"
-    fill="#7DFFAD"
-    fontSize="14"
-    fontWeight="900"
-    letterSpacing="2"
-  >
-    KL
-  </text>
-</svg>
-
+          <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <svg
+              width="58"
+              height="58"
+              viewBox="0 0 100 100"
+              fill="none"
+              xmlns="http://www.w3.org/2000/svg"
+              style={{
+                flexShrink: 0,
+                filter: "drop-shadow(0 0 9px rgba(57,255,136,0.45))",
+              }}
+            >
+              <defs>
+                <linearGradient id="kl-neon" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="#7DFFAD" />
+                  <stop offset="100%" stopColor="#39FF88" />
+                </linearGradient>
+              </defs>
+              <rect
+                x="3"
+                y="3"
+                width="94"
+                height="94"
+                rx="24"
+                fill="#050706"
+                stroke="#39FF88"
+                strokeWidth="2"
+              />
+              <path
+                d="M50 13V22M43 13H57"
+                stroke="#39FF88"
+                strokeWidth="3"
+                strokeLinecap="round"
+              />
+              <path
+                d="M25 39Q25 29 36 29H64Q75 29 75 39V59Q75 69 64 69H36Q25 69 25 59Z"
+                fill="#101812"
+                stroke="url(#kl-neon)"
+                strokeWidth="2.5"
+              />
+              <rect x="34" y="40" width="11" height="11" rx="3" fill="#39FF88" />
+              <rect x="55" y="40" width="11" height="11" rx="3" fill="#39FF88" />
+              <path
+                d="M39 59H61"
+                stroke="#7DFFAD"
+                strokeWidth="3"
+                strokeLinecap="round"
+              />
+              <path
+                d="M18 42H25M75 42H82M18 55H25M75 55H82"
+                stroke="#39FF88"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+              />
+              <text
+                x="50"
+                y="86"
+                textAnchor="middle"
+                fill="#7DFFAD"
+                fontSize="14"
+                fontWeight="900"
+                letterSpacing="2"
+              >
+                KL
+              </text>
+            </svg>
 
             <div>
               <div
@@ -1597,7 +1562,7 @@ export default function Home() {
               style={{
                 width: "100%",
                 borderCollapse: "collapse",
-                minWidth: 760,
+                minWidth: 660,
               }}
             >
               <thead>
@@ -1607,7 +1572,6 @@ export default function Home() {
                   <th style={thStyle}>{t("entryTime")}</th>
                   <th style={thStyle}>{t("exit")}</th>
                   <th style={thStyle}>{t("exitTime")}</th>
-                  <th style={thStyle}>{t("result")}</th>
                   <th style={thStyle}>{t("return")}</th>
                 </tr>
               </thead>
@@ -1616,7 +1580,7 @@ export default function Home() {
                 {tradeList.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={7}
+                      colSpan={6}
                       style={{
                         ...tdStyle,
                         textAlign: "center",
@@ -1634,15 +1598,7 @@ export default function Home() {
                       side.includes("BUY") || side.includes("LONG");
                     const isShort =
                       side.includes("SELL") || side.includes("SHORT");
-                    const result = tradeResult(trade);
                     const ret = tradeReturn(trade);
-
-                    const resultColor =
-                      result === t("win")
-                        ? C.green
-                        : result === t("loss")
-                          ? C.red
-                          : C.gold2;
 
                     return (
                       <tr
@@ -1691,16 +1647,6 @@ export default function Home() {
 
                         <td style={{ ...tdStyle, color: C.muted }}>
                           {dateInZone(tradeExitTime(trade), selectedZone)}
-                        </td>
-
-                        <td
-                          style={{
-                            ...tdStyle,
-                            color: resultColor,
-                            fontWeight: 800,
-                          }}
-                        >
-                          {result}
                         </td>
 
                         <td
