@@ -498,9 +498,11 @@ function numberFrom(...values: any[]): number | null {
 function money(value: any, currency = "USD") {
   const n = numberFrom(value);
   if (n === null) return "—";
+
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency,
+    minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(n);
 }
@@ -510,10 +512,16 @@ function percent(value: any) {
   return n === null ? "—" : `${n.toFixed(2)}%`;
 }
 
+function metricNumber(value: any) {
+  const n = numberFrom(value);
+  return n === null ? "—" : n.toFixed(2);
+}
+
 function dateInZone(value: any, zone: string) {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return String(value);
+
   try {
     return new Intl.DateTimeFormat("en-GB", {
       timeZone: zone,
@@ -531,9 +539,13 @@ function dateInZone(value: any, zone: string) {
 
 function first(data: Data | null, ...keys: string[]) {
   if (!data) return undefined;
+
   for (const key of keys) {
-    if (data[key] !== undefined && data[key] !== null) return data[key];
+    if (data[key] !== undefined && data[key] !== null) {
+      return data[key];
+    }
   }
+
   return undefined;
 }
 
@@ -563,17 +575,20 @@ export default function Home() {
       if (savedLanguage && languages.some((x) => x.code === savedLanguage)) {
         setLanguage(savedLanguage as Lang);
       }
+
       if (savedZone && timeZones.some((x) => x.zone === savedZone)) {
         setSelectedZone(savedZone);
       }
     } catch {
       // Local storage may be unavailable in some browser contexts.
     }
+
     setLanguageReady(true);
   }, []);
 
   useEffect(() => {
     if (!languageReady) return;
+
     try {
       localStorage.setItem("kelilelibot-language", language);
       document.documentElement.lang = language;
@@ -594,12 +609,15 @@ export default function Home() {
   const refreshSignal = useCallback(async () => {
     setSignalLoading(true);
     setSignalError("");
+
     try {
       const response = await fetch("/api/signals", { cache: "no-store" });
       const data = await response.json();
+
       if (!response.ok || data?.error) {
         throw new Error(data?.error || `HTTP ${response.status}`);
       }
+
       setSignal(data);
       setLastUpdate(new Date().toISOString());
     } catch (error) {
@@ -614,12 +632,15 @@ export default function Home() {
   const refreshBacktest = useCallback(async () => {
     setBacktestLoading(true);
     setBacktestError("");
+
     try {
       const response = await fetch("/api/backtest", { cache: "no-store" });
       const data = await response.json();
+
       if (!response.ok || data?.error) {
         throw new Error(data?.error || `HTTP ${response.status}`);
       }
+
       setBacktest(data);
     } catch (error) {
       setBacktestError(
@@ -746,14 +767,18 @@ export default function Home() {
 
   const tradeResult = (trade: Data) => {
     const explicit = String(tradeValue(trade, "result", "status") ?? "").toUpperCase();
+
     if (explicit.includes("WIN") || explicit.includes("PROFIT")) return t("win");
     if (explicit.includes("LOSS") || explicit.includes("LOSE")) return t("loss");
+
     const ret = tradeReturn(trade);
+
     if (ret !== null) {
       if (ret > 0) return t("win");
       if (ret < 0) return t("loss");
       return t("breakeven");
     }
+
     return explicit || "—";
   };
 
@@ -825,6 +850,7 @@ export default function Home() {
             >
               KL
             </div>
+
             <div>
               <div
                 style={{
@@ -1001,6 +1027,7 @@ export default function Home() {
                 >
                   {t("language")}
                 </label>
+
                 <select
                   id="language-select"
                   value={language}
@@ -1031,6 +1058,7 @@ export default function Home() {
                 >
                   {t("timezone")}
                 </label>
+
                 <select
                   id="timezone-select"
                   value={selectedZone}
@@ -1065,6 +1093,7 @@ export default function Home() {
               }}
             >
               <div style={label}>{t("activeZone")}</div>
+
               <div
                 style={{
                   marginTop: 7,
@@ -1078,6 +1107,7 @@ export default function Home() {
                 <span style={{ fontSize: 13, fontWeight: 700 }}>
                   {currentZone?.flag} {currentZone?.name ?? selectedZone}
                 </span>
+
                 <span style={{ color: C.gold2, fontSize: 13 }}>
                   {new Intl.DateTimeFormat(language, {
                     timeZone: selectedZone,
@@ -1087,6 +1117,7 @@ export default function Home() {
                   }).format(now)}
                 </span>
               </div>
+
               <div style={{ fontSize: 11, color: C.muted, marginTop: 7 }}>
                 {t("systemTime")}
               </div>
@@ -1125,10 +1156,12 @@ export default function Home() {
                 boxShadow: `0 0 10px ${C.green}`,
               }}
             />
+
             <span style={{ fontSize: 12, color: C.green, fontWeight: 700 }}>
               {t("active")}
             </span>
           </div>
+
           <span style={{ fontSize: 11, color: C.muted }}>
             {t("auto")}
           </span>
@@ -1146,6 +1179,7 @@ export default function Home() {
           >
             <div>
               <div style={label}>XAU/USD · GOLD</div>
+
               <h1
                 style={{
                   fontSize: 22,
@@ -1156,6 +1190,7 @@ export default function Home() {
               >
                 {t("currentSignal")}
               </h1>
+
               <div style={{ color: C.muted, fontSize: 12 }}>
                 {t("marketAnalysis")}
               </div>
@@ -1169,6 +1204,7 @@ export default function Home() {
               }}
             >
               <div style={label}>{t("currentPrice")}</div>
+
               <div
                 style={{
                   color: C.gold2,
@@ -1204,6 +1240,7 @@ export default function Home() {
                     ? t("sellSignal")
                     : t("waiting")}
               </div>
+
               <div
                 style={{
                   fontSize: 28,
@@ -1214,6 +1251,7 @@ export default function Home() {
               >
                 {signalLoading ? t("loading") : signalLabel}
               </div>
+
               {signal?.reason && (
                 <div
                   style={{
@@ -1279,6 +1317,7 @@ export default function Home() {
                 }}
               >
                 <div style={label}>{item.title}</div>
+
                 <div
                   style={{
                     color: C.text,
@@ -1287,9 +1326,7 @@ export default function Home() {
                     marginTop: 7,
                   }}
                 >
-                  {item.value === undefined || item.value === null
-                    ? "—"
-                    : String(item.value)}
+                  {metricNumber(item.value)}
                 </div>
               </div>
             ))}
@@ -1309,6 +1346,7 @@ export default function Home() {
             <span>
               {t("signalTime")}: {dateInZone(signalTimestamp, selectedZone)}
             </span>
+
             <span>
               {t("updated")}: {dateInZone(lastUpdate, selectedZone)}
             </span>
@@ -1328,6 +1366,7 @@ export default function Home() {
           >
             <div>
               <div style={label}>{t("performance")}</div>
+
               <h2
                 style={{
                   margin: "7px 0 0",
@@ -1338,6 +1377,7 @@ export default function Home() {
                 {t("strategyStats")}
               </h2>
             </div>
+
             <button
               onClick={() => void refreshBacktest()}
               disabled={backtestLoading}
@@ -1382,6 +1422,7 @@ export default function Home() {
                 }}
               >
                 <div style={label}>{stat.title}</div>
+
                 <div
                   style={{
                     marginTop: 11,
@@ -1414,6 +1455,7 @@ export default function Home() {
               }}
             >
               <div style={label}>{t("startingCapital")}</div>
+
               <div
                 style={{
                   fontSize: 17,
@@ -1425,6 +1467,7 @@ export default function Home() {
                 {money(startingCapital)}
               </div>
             </div>
+
             <div
               style={{
                 background: "rgba(212,175,55,0.045)",
@@ -1434,6 +1477,7 @@ export default function Home() {
               }}
             >
               <div style={label}>{t("lastBacktest")}</div>
+
               <div
                 style={{
                   fontSize: 12,
@@ -1464,6 +1508,7 @@ export default function Home() {
           >
             <div>
               <div style={label}>{t("history")}</div>
+
               <h2
                 style={{
                   fontSize: 20,
@@ -1474,6 +1519,7 @@ export default function Home() {
                 {t("recentTrades")}
               </h2>
             </div>
+
             <span
               style={{
                 color: C.gold2,
@@ -1514,6 +1560,7 @@ export default function Home() {
                   <th style={thStyle}>{t("return")}</th>
                 </tr>
               </thead>
+
               <tbody>
                 {tradeList.length === 0 ? (
                   <tr>
@@ -1538,6 +1585,7 @@ export default function Home() {
                       side.includes("SELL") || side.includes("SHORT");
                     const result = tradeResult(trade);
                     const ret = tradeReturn(trade);
+
                     const resultColor =
                       result === t("win")
                         ? C.green
@@ -1546,11 +1594,17 @@ export default function Home() {
                           : C.gold2;
 
                     return (
-                      <tr key={`${String(tradeEntryTime(trade) ?? index)}-${index}`}>
+                      <tr
+                        key={`${String(tradeEntryTime(trade) ?? index)}-${index}`}
+                      >
                         <td style={tdStyle}>
                           <span
                             style={{
-                              color: isLong ? C.green : isShort ? C.red : C.gold2,
+                              color: isLong
+                                ? C.green
+                                : isShort
+                                  ? C.red
+                                  : C.gold2,
                               fontWeight: 800,
                             }}
                           >
@@ -1561,21 +1615,43 @@ export default function Home() {
                                 : side}
                           </span>
                         </td>
-                        <td style={{ ...tdStyle, fontVariantNumeric: "tabular-nums" }}>
+
+                        <td
+                          style={{
+                            ...tdStyle,
+                            fontVariantNumeric: "tabular-nums",
+                          }}
+                        >
                           {money(tradeEntry(trade))}
                         </td>
+
                         <td style={{ ...tdStyle, color: C.muted }}>
                           {dateInZone(tradeEntryTime(trade), selectedZone)}
                         </td>
-                        <td style={{ ...tdStyle, fontVariantNumeric: "tabular-nums" }}>
+
+                        <td
+                          style={{
+                            ...tdStyle,
+                            fontVariantNumeric: "tabular-nums",
+                          }}
+                        >
                           {money(tradeExit(trade))}
                         </td>
+
                         <td style={{ ...tdStyle, color: C.muted }}>
                           {dateInZone(tradeExitTime(trade), selectedZone)}
                         </td>
-                        <td style={{ ...tdStyle, color: resultColor, fontWeight: 800 }}>
+
+                        <td
+                          style={{
+                            ...tdStyle,
+                            color: resultColor,
+                            fontWeight: 800,
+                          }}
+                        >
                           {result}
                         </td>
+
                         <td
                           style={{
                             ...tdStyle,
@@ -1618,6 +1694,7 @@ export default function Home() {
         >
           <span style={{ color: C.gold }}>KL</span> KELILELIBOT · GOLD TRADING
           SYSTEM
+
           <div style={{ marginTop: 7, letterSpacing: 0.2 }}>
             {selectedLanguage?.flag} {selectedLanguage?.name}
           </div>
