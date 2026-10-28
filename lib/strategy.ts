@@ -8,9 +8,11 @@ export type Candle = {
   volume?: number;
 };
 
+export type TradeSignal = "BUY" | "SELL" | "WAIT";
+
 export type StrategyResult = {
-  signal: "BUY" | "SELL" | "WAIT";
-  action: "BUY" | "SELL" | "WAIT";
+  signal: TradeSignal;
+  action: TradeSignal;
   price: number;
   confidence: number;
   stopLoss: number | null;
@@ -23,32 +25,39 @@ export type StrategyResult = {
   atr: number | null;
   reason: string;
   timestamp: string;
+  signalAt: (index: number) => TradeSignal;
 };
 
 export function calculateEMA(
   values: number[],
   period: number
-): Array<number | null> {
-  const result: Array<number | null> = Array(values.length).fill(null);
+): (number | null)[] {
+  const result: (number | null)[] = Array(values.length).fill(null);
 
-  if (period < 1 || values.length < period) {
+  if (
+    !Number.isInteger(period) ||
+    period < 1 ||
+    values.length < period
+  ) {
     return result;
   }
 
+  const multiplier = 2 / (period + 1);
   let sum = 0;
 
   for (let i = 0; i < period; i++) {
     sum += values[i];
   }
 
-  let ema = sum / period;
-  result[period - 1] = ema;
-
-  const multiplier = 2 / (period + 1);
+  let previousEMA = sum / period;
+  result[period - 1] = previousEMA;
 
   for (let i = period; i < values.length; i++) {
-    ema = values[i] * multiplier + ema * (1 - multiplier);
-    result[i] = ema;
+    previousEMA =
+      values[i] * multiplier +
+      previousEMA * (1 - multiplier);
+
+    result[i] = previousEMA;
   }
 
   return result;
@@ -57,35 +66,43 @@ export function calculateEMA(
 export function calculateRSISeries(
   values: number[],
   period = 14
-): Array<number | null> {
-  const result: Array<number | null> = Array(values.length).fill(null);
+): (number | null)[] {
+  const result: (number | null)[] = Array(values.length).fill(null);
 
-  if (period < 1 || values.length <= period) {
+  if (
+    !Number.isInteger(period) ||
+    period < 1 ||
+    values.length <= period
+  ) {
     return result;
   }
 
-  let gains = 0;
-  let losses = 0;
+  let averageGain = 0;
+  let averageLoss = 0;
 
   for (let i = 1; i <= period; i++) {
     const change = values[i] - values[i - 1];
 
-    if (change > 0) gains += change;
-    else losses -= change;
+    if (change > 0) {
+      averageGain += change;
+    } else {
+      averageLoss += Math.abs(change);
+    }
   }
 
-  let averageGain = gains / period;
-  let averageLoss = losses / period;
+  averageGain /= period;
+  averageLoss /= period;
 
-  const getRSI = () => {
-    if (averageLoss === 0 && averageGain === 0) return 50;
-    if (averageLoss === 0) return 100;
+  const getRSI = (gain: number, loss: number): number => {
+    if (gain === 0 && loss === 0) return 50;
+    if (loss === 0) return 100;
+    if (gain === 0) return 0;
 
-    const rs = averageGain / averageLoss;
-    return 100 - 100 / (1 + rs);
+    const relativeStrength = gain / loss;
+    return 100 - 100 / (1 + relativeStrength);
   };
 
-  result[period] = getRSI();
+  result[period] = getRSI(averageGain, averageLoss);
 
   for (let i = period + 1; i < values.length; i++) {
     const change = values[i] - values[i - 1];
@@ -98,7 +115,7 @@ export function calculateRSISeries(
     averageLoss =
       (averageLoss * (period - 1) + loss) / period;
 
-    result[i] = getRSI();
+    result[i] = getRSI(averageGain, averageLoss);
   }
 
   return result;
@@ -107,10 +124,14 @@ export function calculateRSISeries(
 export function calculateATR(
   candles: Candle[],
   period = 14
-): Array<number | null> {
-  const result: Array<number | null> = Array(candles.length).fill(null);
+): (number | null)[] {
+  const result: (number | null)[] = Array(candles.length).fill(null);
 
-  if (period < 1 || candles.length <= period) {
+  if (
+    !Number.isInteger(period) ||
+    period < 1 ||
+    candles.length < period
+  ) {
     return result;
   }
 
@@ -119,32 +140,28 @@ export function calculateATR(
   for (let i = 0; i < candles.length; i++) {
     const candle = candles[i];
 
-    if (i === 0) {
-      trueRanges.push(candle.high - candle.low);
-      continue;
-    }
+    const previousClose =
+      i > 0 ? candles[i - 1].close : candle.close;
 
-    const previousClose = candles[i - 1].close;
-
-    trueRanges.push(
-      Math.max(
-        candle.high - candle.low,
-        Math.abs(candle.high - previousClose),
-        Math.abs(candle.low - previousClose)
-      )
+    const trueRange = Math.max(
+      candle.high - candle.low,
+      Math.abs(candle.high - previousClose),
+      Math.abs(candle.low - previousClose)
     );
+
+    trueRanges.push(trueRange);
   }
 
-  let initialSum = 0;
+  let atr = 0;
 
-  for (let i = 1; i <= period; i++) {
-    initialSum += trueRanges[i];
+  for (let i = 0; i < period; i++) {
+    atr += trueRanges[i];
   }
 
-  let atr = initialSum / period;
-  result[period] = atr;
+  atr /= period;
+  result[period - 1] = atr;
 
-  for (let i = period + 1; i < candles.length; i++) {
+  for (let i = period; i < candles.length; i++) {
     atr = (atr * (period - 1) + trueRanges[i]) / period;
     result[i] = atr;
   }
@@ -152,7 +169,11 @@ export function calculateATR(
   return result;
 }
 
-export function parseCandles(values: unknown[]): Candle[] {
+export function parseCandles(values: unknown): Candle[] {
+  if (!Array.isArray(values)) {
+    throw new Error("Te dhenat e qirinjve nga Twelve Data nuk jane valide.");
+  }
+
   const candles: Candle[] = [];
 
   for (const item of values) {
@@ -160,28 +181,27 @@ export function parseCandles(values: unknown[]): Candle[] {
 
     const row = item as Record<string, unknown>;
 
-    const datetime = String(row.datetime ?? row.date ?? "");
+    const datetime = String(row.datetime ?? "");
     const open = Number(row.open);
     const high = Number(row.high);
     const low = Number(row.low);
     const close = Number(row.close);
 
-    if (
-      !datetime ||
-      !Number.isFinite(open) ||
-      !Number.isFinite(high) ||
-      !Number.isFinite(low) ||
-      !Number.isFinite(close) ||
-      open <= 0 ||
-      high <= 0 ||
-      low <= 0 ||
-      close <= 0 ||
-      high < low
-    ) {
-      continue;
-    }
+    const valid =
+      datetime.length > 0 &&
+      Number.isFinite(open) &&
+      Number.isFinite(high) &&
+      Number.isFinite(low) &&
+      Number.isFinite(close) &&
+      open > 0 &&
+      high > 0 &&
+      low > 0 &&
+      close > 0 &&
+      high >= low;
 
-    const volumeNumber = Number(row.volume);
+    if (!valid) continue;
+
+    const volumeValue = Number(row.volume);
 
     candles.push({
       datetime,
@@ -189,167 +209,219 @@ export function parseCandles(values: unknown[]): Candle[] {
       high,
       low,
       close,
-      ...(Number.isFinite(volumeNumber) && volumeNumber >= 0
-        ? { volume: volumeNumber }
+      ...(Number.isFinite(volumeValue) && volumeValue >= 0
+        ? { volume: volumeValue }
         : {}),
     });
   }
 
-  // Twelve Data zakonisht i kthen qirinjte nga me i riu te me i vjetri.
-  // Strategjia ka nevoje per renditje kronologjike.
-  candles.sort(
-    (a, b) =>
-      new Date(a.datetime).getTime() -
-      new Date(b.datetime).getTime()
-  );
+  // Twelve Data zakonisht i kthen qirinjt nga me i riu te me i vjetri.
+  // Backtest-i ka nevoje per rend kronologjik.
+  candles.sort((a, b) => {
+    const timeA = Date.parse(a.datetime);
+    const timeB = Date.parse(b.datetime);
 
-  return candles;
+    if (Number.isFinite(timeA) && Number.isFinite(timeB)) {
+      return timeA - timeB;
+    }
+
+    return a.datetime.localeCompare(b.datetime);
+  });
+
+  // Hiq qirinjte e dyfishte me te njejten kohe.
+  return candles.filter(
+    (candle, index) =>
+      index === 0 ||
+      candle.datetime !== candles[index - 1].datetime
+  );
 }
 
 export function analyzeCandles(candles: Candle[]): StrategyResult {
-  const validCandles = [...candles].sort(
-    (a, b) =>
-      new Date(a.datetime).getTime() -
-      new Date(b.datetime).getTime()
-  );
-
-  const closes = validCandles.map((candle) => candle.close);
-  const last = validCandles[validCandles.length - 1];
-
-  if (!last || closes.length < 220) {
-    return {
-      signal: "WAIT",
-      action: "WAIT",
-      price: last?.close ?? 0,
-      confidence: 0,
-      stopLoss: null,
-      takeProfit: null,
-      riskReward: 0,
-      rsi: null,
-      ema9: null,
-      ema21: null,
-      ema200: null,
-      atr: null,
-      reason: `Nevojiten te pakten 220 qirinj. Aktualisht: ${closes.length}.`,
-      timestamp: last?.datetime ?? new Date().toISOString(),
-    };
+  if (candles.length < 200) {
+    throw new Error(
+      `Nuk ka mjaft qirinj per EMA 200. U moren ${candles.length}; duhen te pakten 200.`
+    );
   }
 
+  const closes = candles.map((candle) => candle.close);
   const ema9Series = calculateEMA(closes, 9);
   const ema21Series = calculateEMA(closes, 21);
   const ema200Series = calculateEMA(closes, 200);
   const rsiSeries = calculateRSISeries(closes, 14);
-  const atrSeries = calculateATR(validCandles, 14);
+  const atrSeries = calculateATR(candles, 14);
 
-  const index = closes.length - 1;
+  function signalAt(index: number): TradeSignal {
+    if (
+      !Number.isInteger(index) ||
+      index < 200 ||
+      index >= candles.length
+    ) {
+      return "WAIT";
+    }
 
-  const ema9 = ema9Series[index];
-  const ema21 = ema21Series[index];
-  const ema200 = ema200Series[index];
-  const rsi = rsiSeries[index];
-  const atr = atrSeries[index];
+    const candle = candles[index];
+    const previousCandle = candles[index - 1];
 
-  if (
-    ema9 === null ||
-    ema21 === null ||
-    ema200 === null ||
-    rsi === null ||
-    atr === null
-  ) {
-    return {
-      signal: "WAIT",
-      action: "WAIT",
-      price: last.close,
-      confidence: 0,
-      stopLoss: null,
-      takeProfit: null,
-      riskReward: 0,
-      rsi,
-      ema9,
-      ema21,
-      ema200,
-      atr,
-      reason: "Nuk u arrit te llogariten te gjithe treguesit.",
-      timestamp: last.datetime,
-    };
+    const ema9 = ema9Series[index];
+    const ema21 = ema21Series[index];
+    const ema200 = ema200Series[index];
+    const rsi = rsiSeries[index];
+
+    if (
+      ema9 === null ||
+      ema21 === null ||
+      ema200 === null ||
+      rsi === null
+    ) {
+      return "WAIT";
+    }
+
+    let buyScore = 0;
+    let sellScore = 0;
+
+    // Drejtimi afatshkurter.
+    if (ema9 > ema21) buyScore += 25;
+    if (ema9 < ema21) sellScore += 25;
+
+    // Filtri i trendit me EMA 200.
+    if (candle.close > ema200) buyScore += 25;
+    if (candle.close < ema200) sellScore += 25;
+
+    // RSI 14: shmang blerjen ne zona shume te mbinxehura.
+    if (rsi >= 50 && rsi <= 70) buyScore += 25;
+    if (rsi >= 30 && rsi < 50) sellScore += 25;
+
+    // Konfirmimi nga qiriri i fundit.
+    if (candle.close > previousCandle.close) buyScore += 25;
+    if (candle.close < previousCandle.close) sellScore += 25;
+
+    if (buyScore >= 75 && buyScore > sellScore) return "BUY";
+    if (sellScore >= 75 && sellScore > buyScore) return "SELL";
+
+    return "WAIT";
   }
 
-  let buyScore = 0;
-  let sellScore = 0;
-  const reasons: string[] = [];
+  const lastIndex = candles.length - 1;
+  const lastCandle = candles[lastIndex];
 
-  if (ema9 > ema21) {
-    buyScore += 30;
-    reasons.push("EMA 9 mbi EMA 21");
-  } else if (ema9 < ema21) {
-    sellScore += 30;
-    reasons.push("EMA 9 nen EMA 21");
-  }
+  const ema9 = ema9Series[lastIndex];
+  const ema21 = ema21Series[lastIndex];
+  const ema200 = ema200Series[lastIndex];
+  const rsi = rsiSeries[lastIndex];
+  const atr = atrSeries[lastIndex];
 
-  if (last.close > ema200) {
-    buyScore += 30;
-    reasons.push("Cmimi mbi EMA 200");
-  } else if (last.close < ema200) {
-    sellScore += 30;
-    reasons.push("Cmimi nen EMA 200");
-  }
+  const signal = signalAt(lastIndex);
 
-  if (rsi >= 50 && rsi <= 68) {
-    buyScore += 20;
-    reasons.push("RSI favorizon bleresit");
-  } else if (rsi >= 32 && rsi < 50) {
-    sellScore += 20;
-    reasons.push("RSI favorizon shitesit");
-  }
+  const confidence =
+    signal === "BUY"
+      ? calculateConfidence(
+          ema9,
+          ema21,
+          ema200,
+          rsi,
+          lastCandle.close,
+          lastCandle.close > candles[lastIndex - 1].close,
+          "BUY"
+        )
+      : signal === "SELL"
+        ? calculateConfidence(
+            ema9,
+            ema21,
+            ema200,
+            rsi,
+            lastCandle.close,
+            lastCandle.close < candles[lastIndex - 1].close,
+            "SELL"
+          )
+        : 0;
 
-  if (last.close > last.open) {
-    buyScore += 20;
-    reasons.push("Qiri i fundit bullish");
-  } else if (last.close < last.open) {
-    sellScore += 20;
-    reasons.push("Qiri i fundit bearish");
-  }
+  const stopDistance =
+    atr !== null && Number.isFinite(atr) ? atr * 1.5 : null;
 
-  let signal: "BUY" | "SELL" | "WAIT" = "WAIT";
-  let confidence = Math.max(buyScore, sellScore);
+  const stopLoss =
+    signal !== "WAIT" && stopDistance !== null
+      ? lastCandle.close +
+        (signal === "BUY" ? -stopDistance : stopDistance)
+      : null;
 
-  if (buyScore >= 75 && buyScore > sellScore) {
-    signal = "BUY";
-    confidence = buyScore;
-  } else if (sellScore >= 75 && sellScore > buyScore) {
-    signal = "SELL";
-    confidence = sellScore;
-  }
+  const takeProfit =
+    signal !== "WAIT" && stopDistance !== null
+      ? lastCandle.close +
+        (signal === "BUY" ? stopDistance * 2 : -stopDistance * 2)
+      : null;
 
-  let stopLoss: number | null = null;
-  let takeProfit: number | null = null;
-  const riskReward = 2;
+  let reason = "Nuk ka konfirmim te mjaftueshem nga EMA dhe RSI.";
 
   if (signal === "BUY") {
-    stopLoss = last.close - atr * 1.5;
-    takeProfit = last.close + atr * 3;
+    reason = "BUY: EMA, RSI dhe drejtimi i qiririt japin konfirmim.";
   } else if (signal === "SELL") {
-    stopLoss = last.close + atr * 1.5;
-    takeProfit = last.close - atr * 3;
+    reason = "SELL: EMA, RSI dhe drejtimi i qiririt japin konfirmim.";
   }
 
   return {
     signal,
     action: signal,
-    price: last.close,
+    price: lastCandle.close,
     confidence,
     stopLoss,
     takeProfit,
-    riskReward,
+    riskReward: stopLoss !== null && takeProfit !== null ? 2 : 0,
     rsi,
     ema9,
     ema21,
     ema200,
     atr,
-    reason:
-      signal === "WAIT"
-        ? `Sinjali nuk i ploteson kushtet. BUY: ${buyScore}/100, SELL: ${sellScore}/100.`
-        : reasons.join(" | "),
-    timestamp: last.datetime,
+    reason,
+    timestamp: lastCandle.datetime,
+    signalAt,
   };
+}
+
+function calculateConfidence(
+  ema9: number | null,
+  ema21: number | null,
+  ema200: number | null,
+  rsi: number | null,
+  price: number,
+  candleConfirms: boolean,
+  direction: "BUY" | "SELL"
+): number {
+  if (
+    ema9 === null ||
+    ema21 === null ||
+    ema200 === null ||
+    rsi === null
+  ) {
+    return 0;
+  }
+
+  let score = 0;
+
+  if (
+    direction === "BUY"
+      ? ema9 > ema21
+      : ema9 < ema21
+  ) {
+    score += 25;
+  }
+
+  if (
+    direction === "BUY"
+      ? price > ema200
+      : price < ema200
+  ) {
+    score += 25;
+  }
+
+  if (
+    direction === "BUY"
+      ? rsi >= 50 && rsi <= 70
+      : rsi >= 30 && rsi < 50
+  ) {
+    score += 25;
+  }
+
+  if (candleConfirms) score += 25;
+
+  return score;
 }
