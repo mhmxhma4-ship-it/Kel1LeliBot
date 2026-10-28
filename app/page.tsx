@@ -1,3 +1,6 @@
+Ja skedari i plotë `app/page.tsx`. Entry Price, TP1, TP2 dhe SL lexohen nga përgjigja e `/api/signals`. Kodi pranon çelësat `entry`/`entryPrice`, `tp1`/`takeProfit1`, `tp2`/`takeProfit2` dhe `sl`/`stopLoss`, edhe të futur brenda `levels` ose `trade`. Kur sinjali është WAIT, shfaqet "—".
+
+```tsx
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
@@ -79,6 +82,10 @@ const en: Record<string, string> = {
   loadingStats: "Calculating...",
   noSignal: "No signal data available",
   systemTime: "Clock updates automatically",
+  entryPrice: "Entry price",
+  takeProfit1: "Take Profit 1",
+  takeProfit2: "Take Profit 2",
+  stopLoss: "Stop Loss",
 };
 
 const translations: Partial<Record<Lang, Record<string, string>>> = {
@@ -108,6 +115,8 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     errorSignal: "Gabim sinjali", errorBacktest: "Gabim backtest-i",
     loadingStats: "Duke llogaritur...", noSignal: "Nuk ka të dhëna për sinjalin",
     systemTime: "Ora përditësohet automatikisht",
+    entryPrice: "Çmimi i hyrjes", takeProfit1: "Take Profit 1",
+    takeProfit2: "Take Profit 2", stopLoss: "Stop Loss",
   },
   el: {
     menu: "Μενού", language: "Γλώσσα", timezone: "Ζώνη ώρας",
@@ -135,6 +144,8 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     errorSignal: "Σφάλμα σήματος", errorBacktest: "Σφάλμα backtest",
     loadingStats: "Υπολογισμός...", noSignal: "Δεν υπάρχουν δεδομένα σήματος",
     systemTime: "Το ρολόι ενημερώνεται αυτόματα",
+    entryPrice: "Τιμή εισόδου", takeProfit1: "Take Profit 1",
+    takeProfit2: "Take Profit 2", stopLoss: "Stop Loss",
   },
   it: {
     menu: "Menu", language: "Lingua", timezone: "Fuso orario",
@@ -162,6 +173,8 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     errorSignal: "Errore segnale", errorBacktest: "Errore backtest",
     loadingStats: "Calcolo...", noSignal: "Nessun dato del segnale disponibile",
     systemTime: "L'orologio si aggiorna automaticamente",
+    entryPrice: "Prezzo di ingresso", takeProfit1: "Take Profit 1",
+    takeProfit2: "Take Profit 2", stopLoss: "Stop Loss",
   },
   es: {
     menu: "Menú", language: "Idioma", timezone: "Zona horaria",
@@ -189,6 +202,8 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     errorSignal: "Error de señal", errorBacktest: "Error de backtest",
     loadingStats: "Calculando...", noSignal: "No hay datos de señal disponibles",
     systemTime: "El reloj se actualiza automáticamente",
+    entryPrice: "Precio de entrada", takeProfit1: "Take Profit 1",
+    takeProfit2: "Take Profit 2", stopLoss: "Stop Loss",
   },
   pt: {
     menu: "Menu", language: "Idioma", timezone: "Fuso horário",
@@ -216,6 +231,8 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     errorSignal: "Erro no sinal", errorBacktest: "Erro no backtest",
     loadingStats: "Calculando...", noSignal: "Nenhum dado de sinal disponível",
     systemTime: "O relógio é atualizado automaticamente",
+    entryPrice: "Preço de entrada", takeProfit1: "Take Profit 1",
+    takeProfit2: "Take Profit 2", stopLoss: "Stop Loss",
   },
   fr: {
     menu: "Menu", language: "Langue", timezone: "Fuseau horaire",
@@ -243,6 +260,8 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     errorSignal: "Erreur de signal", errorBacktest: "Erreur de backtest",
     loadingStats: "Calcul...", noSignal: "Aucune donnée de signal disponible",
     systemTime: "L'horloge se met à jour automatiquement",
+    entryPrice: "Prix d'entrée", takeProfit1: "Take Profit 1",
+    takeProfit2: "Take Profit 2", stopLoss: "Stop Loss",
   },
   de: {
     menu: "Menü", language: "Sprache", timezone: "Zeitzone",
@@ -269,6 +288,8 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     errorSignal: "Signalfehler", errorBacktest: "Backtest-Fehler",
     loadingStats: "Berechnung...", noSignal: "Keine Signaldaten verfügbar",
     systemTime: "Uhrzeit wird automatisch aktualisiert",
+    entryPrice: "Einstiegspreis", takeProfit1: "Take Profit 1",
+    takeProfit2: "Take Profit 2", stopLoss: "Stop Loss",
   },
   tr: {
     menu: "Menü", language: "Dil", timezone: "Saat dilimi",
@@ -295,6 +316,8 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     errorSignal: "Sinyal hatası", errorBacktest: "Backtest hatası",
     loadingStats: "Hesaplanıyor...", noSignal: "Sinyal verisi bulunamadı",
     systemTime: "Saat otomatik güncellenir",
+    entryPrice: "Giriş fiyatı", takeProfit1: "Take Profit 1",
+    takeProfit2: "Take Profit 2", stopLoss: "Stop Loss",
   },
   ar: {
     menu: "القائمة", language: "اللغة", timezone: "المنطقة الزمنية",
@@ -321,6 +344,8 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     errorSignal: "خطأ في الإشارة", errorBacktest: "خطأ في الاختبار",
     loadingStats: "جار الحساب...", noSignal: "لا توجد بيانات للإشارة",
     systemTime: "يتم تحديث الساعة تلقائيًا",
+    entryPrice: "سعر الدخول", takeProfit1: "جني الأرباح 1",
+    takeProfit2: "جني الأرباح 2", stopLoss: "وقف الخسارة",
   },
   ru: {
     menu: "Меню", language: "Язык", timezone: "Часовой пояс",
@@ -348,6 +373,8 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     errorSignal: "Ошибка сигнала", errorBacktest: "Ошибка бэктеста",
     loadingStats: "Расчёт...", noSignal: "Нет данных сигнала",
     systemTime: "Время обновляется автоматически",
+    entryPrice: "Цена входа", takeProfit1: "Тейк-профит 1",
+    takeProfit2: "Тейк-профит 2", stopLoss: "Стоп-лосс",
   },
   "pt-BR": {
     menu: "Menu", language: "Idioma", timezone: "Fuso horário",
@@ -375,6 +402,8 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     errorSignal: "Erro no sinal", errorBacktest: "Erro no backtest",
     loadingStats: "Calculando...", noSignal: "Nenhum dado de sinal disponível",
     systemTime: "O relógio é atualizado automaticamente",
+    entryPrice: "Preço de entrada", takeProfit1: "Take Profit 1",
+    takeProfit2: "Take Profit 2", stopLoss: "Stop Loss",
   },
   ja: {
     menu: "メニュー", language: "言語", timezone: "タイムゾーン",
@@ -401,6 +430,8 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     errorSignal: "シグナルエラー",
     errorBacktest: "バックテストエラー", loadingStats: "計算中...",
     noSignal: "シグナルデータがありません", systemTime: "時計は自動更新されます",
+    entryPrice: "エントリー価格", takeProfit1: "利確 1",
+    takeProfit2: "利確 2", stopLoss: "損切り",
   },
   zh: {
     menu: "菜单", language: "语言", timezone: "时区",
@@ -426,6 +457,8 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     errorSignal: "信号错误",
     errorBacktest: "回测错误", loadingStats: "计算中...",
     noSignal: "暂无信号数据", systemTime: "时钟自动更新",
+    entryPrice: "入场价格", takeProfit1: "止盈 1",
+    takeProfit2: "止盈 2", stopLoss: "止损",
   },
 };
 
@@ -655,6 +688,7 @@ export default function Home() {
 
   const isBuy = rawSignal.includes("BUY") || rawSignal.includes("LONG");
   const isSell = rawSignal.includes("SELL") || rawSignal.includes("SHORT");
+  const isWait = !isBuy && !isSell;
   const signalColor = isBuy ? C.green : isSell ? C.red : C.gold;
   const signalLabel = isBuy ? t("buy") : isSell ? t("sell") : t("wait");
 
@@ -664,6 +698,47 @@ export default function Home() {
   const ema21 = first(signal, "ema21", "EMA21", "ema_21");
   const ema200 = first(signal, "ema200", "EMA200", "ema_200");
   const signalTimestamp = first(signal, "timestamp", "time", "date");
+
+  const pickLevel = (...keys: string[]) =>
+    first(signal, ...keys) ??
+    first(signal?.levels ?? null, ...keys) ??
+    first(signal?.trade ?? null, ...keys);
+
+  const entryPriceValue = pickLevel(
+    "entryPrice", "entry_price", "entry", "entryPoint"
+  );
+  const tp1Value = pickLevel(
+    "tp1", "TP1", "takeProfit1", "take_profit_1", "takeProfit_1"
+  );
+  const tp2Value = pickLevel(
+    "tp2", "TP2", "takeProfit2", "take_profit_2", "takeProfit_2"
+  );
+  const slValue = pickLevel(
+    "sl", "SL", "stopLoss", "stop_loss", "stoploss"
+  );
+
+  const levelCards = [
+    {
+      title: t("entryPrice"),
+      value: isWait ? "—" : money(entryPriceValue),
+      color: C.gold2,
+    },
+    {
+      title: t("takeProfit1"),
+      value: isWait ? "—" : money(tp1Value),
+      color: C.green,
+    },
+    {
+      title: t("takeProfit2"),
+      value: isWait ? "—" : money(tp2Value),
+      color: C.green,
+    },
+    {
+      title: t("stopLoss"),
+      value: isWait ? "—" : money(slValue),
+      color: C.red,
+    },
+  ];
 
   const tradeList: Data[] = Array.isArray(backtest?.trades)
     ? [...backtest.trades].reverse().slice(0, 20)
@@ -1317,6 +1392,43 @@ export default function Home() {
               marginTop: 16,
             }}
           >
+            {levelCards.map((item) => (
+              <div
+                key={item.title}
+                style={{
+                  border: "1px solid rgba(255,255,255,0.055)",
+                  background: C.panel2,
+                  borderRadius: 12,
+                  padding: 13,
+                  minWidth: 0,
+                }}
+              >
+                <div style={label}>{item.title}</div>
+
+                <div
+                  style={{
+                    color: item.value === "—" ? C.muted : item.color,
+                    fontSize: 17,
+                    fontWeight: 800,
+                    marginTop: 7,
+                    overflowWrap: "anywhere",
+                    fontVariantNumeric: "tabular-nums",
+                  }}
+                >
+                  {item.value}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(125px, 1fr))",
+              gap: 10,
+              marginTop: 10,
+            }}
+          >
             {[
               { title: "RSI", value: rsi },
               { title: "EMA 9", value: ema9 },
@@ -1750,3 +1862,4 @@ export default function Home() {
     </main>
   );
 }
+```
