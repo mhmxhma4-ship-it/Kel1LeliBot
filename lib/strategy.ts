@@ -68,6 +68,7 @@ export function calculateEMA(
   for (let i = period; i < values.length; i++) {
     previousEMA =
       values[i] * multiplier + previousEMA * (1 - multiplier);
+
     result[i] = previousEMA;
   }
 
@@ -94,6 +95,7 @@ export function calculateRSISeries(
 
   for (let i = 1; i <= period; i++) {
     const change = values[i] - values[i - 1];
+
     averageGain += Math.max(change, 0);
     averageLoss += Math.max(-change, 0);
   }
@@ -117,6 +119,7 @@ export function calculateRSISeries(
 
     averageGain =
       (averageGain * (period - 1) + Math.max(change, 0)) / period;
+
     averageLoss =
       (averageLoss * (period - 1) + Math.max(-change, 0)) / period;
 
@@ -233,6 +236,7 @@ export function parseCandles(values: unknown): Candle[] {
 
   for (const candle of candles) {
     if (seen.has(candle.datetime)) continue;
+
     seen.add(candle.datetime);
     uniqueCandles.push(candle);
   }
@@ -276,12 +280,15 @@ export function analyzeCandles(candles: Candle[]): StrategyResult {
 
   for (let i = 0; i < macdSeries.length; i++) {
     if (macdSeries[i] === null) continue;
+
     macdSignalSeries[i] = macdSignalValues[validIndex];
     validIndex++;
   }
 
-  // Filtron zhurmen dhe levizjet shume te vogla.
-  function getAverageRange(index: number, period: number): number | null {
+  function getAverageRange(
+    index: number,
+    period: number
+  ): number | null {
     if (index - period + 1 < 0) return null;
 
     let total = 0;
@@ -337,12 +344,12 @@ export function analyzeCandles(candles: Candle[]): StrategyResult {
     const range = candle.high - candle.low;
     if (range <= 0) return "WAIT";
 
-    // Mos hyjme kur cmimi eshte shume larg EMA 21.
+    // Shmang hyrjet kur cmimi eshte shume larg mesatares.
     if (Math.abs(candle.close - ema21) > atr * 1.25) {
       return "WAIT";
     }
 
-    // Shmangim tregun pa levizje dhe qirinjt e jashtezakonshem.
+    // Filtrim i tregut shume te qete ose te levizjeve ekstreme.
     if (
       atr / candle.close < 0.00005 ||
       range < averageRange * 0.45 ||
@@ -351,7 +358,6 @@ export function analyzeCandles(candles: Candle[]): StrategyResult {
       return "WAIT";
     }
 
-    // Mos hyjme kur qiriu mbyllet ne mes te diapazonit.
     const closeLocation = (candle.close - candle.low) / range;
 
     const bullishCandle =
@@ -378,7 +384,7 @@ export function analyzeCandles(candles: Candle[]): StrategyResult {
 
     const histogram = macd - macdSignal;
 
-    // Konfirmim nga struktura e fundit e cmimit.
+    // Krahaso cmimin me 8 qirinjte e mbyllur para qiriut aktual.
     const lookback = 8;
     let previousHigh = -Infinity;
     let previousLow = Infinity;
@@ -388,13 +394,21 @@ export function analyzeCandles(candles: Candle[]): StrategyResult {
       previousLow = Math.min(previousLow, candles[i].low);
     }
 
-    const bullishMomentum =
-      candle.close > previousHigh ||
-      (ema9 > ema21 && previousCandle.close <= ema9 && candle.close > ema9);
+    const bullishBreakout = candle.close > previousHigh;
+    const bearishBreakout = candle.close < previousLow;
 
-    const bearishMomentum =
-      candle.close < previousLow ||
-      (ema9 < ema21 && previousCandle.close >= ema9 && candle.close < ema9);
+    const bullishPullback =
+      ema9 > ema21 &&
+      previousCandle.close <= ema9 &&
+      candle.close > ema9;
+
+    const bearishPullback =
+      ema9 < ema21 &&
+      previousCandle.close >= ema9 &&
+      candle.close < ema9;
+
+    const bullishMomentum = bullishBreakout || bullishPullback;
+    const bearishMomentum = bearishBreakout || bearishPullback;
 
     let buyScore = 0;
     let sellScore = 0;
@@ -413,8 +427,13 @@ export function analyzeCandles(candles: Candle[]): StrategyResult {
       sellScore += 15;
     }
 
-    if (macd > macdSignal && histogram > 0) buyScore += 15;
-    if (macd < macdSignal && histogram < 0) sellScore += 15;
+    if (macd > macdSignal && histogram > 0) {
+      buyScore += 15;
+    }
+
+    if (macd < macdSignal && histogram < 0) {
+      sellScore += 15;
+    }
 
     if (bullishCandle) buyScore += 15;
     if (bearishCandle) sellScore += 15;
@@ -422,7 +441,7 @@ export function analyzeCandles(candles: Candle[]): StrategyResult {
     if (bullishMomentum) buyScore += 15;
     if (bearishMomentum) sellScore += 15;
 
-    // Pa konfirmim te trendit dhe momentit nuk lejojme hyrje.
+    // Trend i forte dhe minimumi i pikve te kerkuara.
     if (bullishTrend && buyScore >= 85 && buyScore > sellScore) {
       return "BUY";
     }
@@ -447,7 +466,7 @@ export function analyzeCandles(candles: Candle[]): StrategyResult {
 
   let confidence = 0;
   let reason =
-    "WAIT: Nuk ka mjaft konfirmime. Prit trend, moment dhe hyrje me te qarte.";
+    "WAIT: Konfirmimet nuk jane te mjaftueshme. Prit nje hyrje me te qarte.";
 
   if (signal !== "WAIT") {
     const previousCandle = candles[lastIndex - 1];
@@ -519,11 +538,10 @@ export function analyzeCandles(candles: Candle[]): StrategyResult {
       score += 15;
     }
 
-    const lookback = 8;
     let previousHigh = -Infinity;
     let previousLow = Infinity;
 
-    for (let i = lastIndex - lookback; i < lastIndex; i++) {
+    for (let i = lastIndex - 8; i < lastIndex; i++) {
       previousHigh = Math.max(previousHigh, candles[i].high);
       previousLow = Math.min(previousLow, candles[i].low);
     }
@@ -553,8 +571,9 @@ export function analyzeCandles(candles: Candle[]): StrategyResult {
       `Piket e strategjise: ${confidence}/100. Nuk jane probabilitet fitimi.`;
   }
 
-  // SL/TP sipas ATR-se. Risk/reward = 1:2.
-  const stopDistance = atr !== null && atr > 0 ? atr * 1.5 : null;
+  // SL dhe TP llogariten nga cmimi i sinjalit dhe ATR.
+  const stopDistance =
+    atr !== null && atr > 0 ? atr * 1.5 : null;
 
   const stopLoss =
     signal !== "WAIT" && stopDistance !== null
@@ -579,7 +598,8 @@ export function analyzeCandles(candles: Candle[]): StrategyResult {
     confidence,
     stopLoss,
     takeProfit,
-    riskReward: stopLoss !== null && takeProfit !== null ? 2 : 0,
+    riskReward:
+      stopLoss !== null && takeProfit !== null ? 2 : 0,
     rsi: roundIndicator(rsi),
     ema9: roundIndicator(ema9),
     ema21: roundIndicator(ema21),
