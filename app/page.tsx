@@ -1,54 +1,38 @@
-
 "use client";
-
 import { useCallback, useEffect, useState } from "react";
-
 type Data = Record<string, any>;
-
 const formatNumber = (value: unknown, decimals = 2): string => {
   if (value === null || value === undefined || value === "") return "—";
-
   const number =
     typeof value === "number"
       ? value
       : Number(String(value).replace(",", "."));
-
   return Number.isFinite(number) ? number.toFixed(decimals) : "—";
 };
-
 const formatPrice = (value: unknown) => formatNumber(value, 3);
 const formatRSI = (value: unknown) => formatNumber(value, 2);
-
 const getNumber = (obj: Data | null, keys: string[]): number | null => {
   if (!obj) return null;
-
   for (const key of keys) {
     const value = obj[key];
     if (value === null || value === undefined || value === "") continue;
-
     const number =
       typeof value === "number"
         ? value
         : Number(String(value).replace(",", "."));
-
     if (Number.isFinite(number)) return number;
   }
-
   return null;
 };
-
 const getValue = (obj: Data | null, keys: string[]): any => {
   if (!obj) return undefined;
-
   for (const key of keys) {
     if (obj[key] !== undefined && obj[key] !== null && obj[key] !== "") {
       return obj[key];
     }
   }
-
   return undefined;
 };
-
 const languages = [
   { code: "sq", label: "Shqip" },
   { code: "en", label: "English" },
@@ -65,7 +49,6 @@ const languages = [
   { code: "ja", label: "日本語" },
   { code: "zh", label: "中文" },
 ];
-
 const timeZones = [
   { value: "Europe/Athens", label: "Greece" },
   { value: "Europe/Tirane", label: "Albania" },
@@ -77,7 +60,6 @@ const timeZones = [
   { value: "Australia/Sydney", label: "Sydney" },
   { value: "UTC", label: "UTC" },
 ];
-
 const translations: Record<string, Record<string, string>> = {
   sq: {
     title: "KeliLelibot",
@@ -156,19 +138,16 @@ const translations: Record<string, Record<string, string>> = {
     takeProfit: "Take Profit",
   },
 };
-
 const t = (language: string, key: string) =>
   translations[language]?.[key] ??
   translations.en[key] ??
   translations.sq[key] ??
   key;
-
 function calculateScores(data: Data | null) {
   const rsi = getNumber(data, ["rsi", "RSI", "rsi_value", "rsiValue"]);
   const ema9 = getNumber(data, ["ema9", "ema_9"]);
   const ema21 = getNumber(data, ["ema21", "ema_21"]);
   const ema200 = getNumber(data, ["ema200", "ema_200"]);
-
   const macd = getNumber(data, [
     "macdHistogram",
     "macd_histogram",
@@ -178,14 +157,11 @@ function calculateScores(data: Data | null) {
     "macd_value",
     "macdValue",
   ]);
-
   let buyPoints = 0;
   let sellPoints = 0;
   let availableWeight = 0;
-
   if (ema9 !== null && ema21 !== null) {
     availableWeight += 40;
-
     if (ema9 > ema21) buyPoints += 40;
     else if (ema9 < ema21) sellPoints += 40;
     else {
@@ -193,10 +169,8 @@ function calculateScores(data: Data | null) {
       sellPoints += 20;
     }
   }
-
   if (rsi !== null) {
     availableWeight += 30;
-
     if (rsi > 55 && rsi < 70) buyPoints += 30;
     else if (rsi < 45 && rsi > 30) sellPoints += 30;
     else {
@@ -204,10 +178,8 @@ function calculateScores(data: Data | null) {
       sellPoints += 15;
     }
   }
-
   if (macd !== null) {
     availableWeight += 30;
-
     if (macd > 0) buyPoints += 30;
     else if (macd < 0) sellPoints += 30;
     else {
@@ -215,7 +187,6 @@ function calculateScores(data: Data | null) {
       sellPoints += 15;
     }
   }
-
   if (availableWeight === 0) {
     return {
       buy: 0,
@@ -228,9 +199,7 @@ function calculateScores(data: Data | null) {
       macd,
     };
   }
-
   const buy = Math.round((buyPoints / availableWeight) * 100);
-
   return {
     buy,
     sell: 100 - buy,
@@ -242,7 +211,6 @@ function calculateScores(data: Data | null) {
     macd,
   };
 }
-
 function Metric({
   label,
   value,
@@ -261,7 +229,6 @@ function Metric({
     </div>
   );
 }
-
 export default function Home() {
   const [signals, setSignals] = useState<Data | null>(null);
   const [backtest, setBacktest] = useState<Data | null>(null);
@@ -271,43 +238,33 @@ export default function Home() {
   const [language, setLanguage] = useState("sq");
   const [timezone, setTimezone] = useState("Europe/Athens");
   const [lastUpdated, setLastUpdated] = useState("");
-
   const text = (key: string) => t(language, key);
-
   useEffect(() => {
     try {
       const savedLanguage = localStorage.getItem("kelilelibot-language");
       const savedTimezone = localStorage.getItem("kelilelibot-timezone");
-
       if (savedLanguage) setLanguage(savedLanguage);
       if (savedTimezone) setTimezone(savedTimezone);
     } catch {}
   }, []);
-
   const loadData = useCallback(async () => {
     setLoading(true);
     setError("");
-
     try {
       const [signalResponse, backtestResponse] = await Promise.all([
         fetch("/api/signals", { cache: "no-store" }),
         fetch("/api/backtest", { cache: "no-store" }),
       ]);
-
       if (!signalResponse.ok) {
         throw new Error(`Signals API: ${signalResponse.status}`);
       }
-
       const signalData = await signalResponse.json();
       let backtestData: Data | null = null;
-
       if (backtestResponse.ok) {
         backtestData = await backtestResponse.json();
       }
-
       setSignals(signalData);
       setBacktest(backtestData);
-
       setLastUpdated(
         new Intl.DateTimeFormat(language, {
           hour: "2-digit",
@@ -322,45 +279,32 @@ export default function Home() {
       setLoading(false);
     }
   }, [language, timezone]);
-
   useEffect(() => {
     void loadData();
-
-    const interval = setInterval(() => {
-      void loadData();
-    }, 60_000);
-
+    const interval = setInterval(() => void loadData(), 60_000);
     return () => clearInterval(interval);
   }, [loadData]);
-
   const changeLanguage = (value: string) => {
     setLanguage(value);
-
     try {
       localStorage.setItem("kelilelibot-language", value);
     } catch {}
   };
-
   const changeTimezone = (value: string) => {
     setTimezone(value);
-
     try {
       localStorage.setItem("kelilelibot-timezone", value);
     } catch {}
   };
-
   const scores = calculateScores(signals);
-
   const signalValue = String(
     getValue(signals, ["signal", "action", "recommendation", "type"]) ?? "WAIT"
   ).toUpperCase();
-
   const signalClass = signalValue.includes("BUY")
     ? "signal-buy"
     : signalValue.includes("SELL")
       ? "signal-sell"
       : "signal-neutral";
-
   const price = formatPrice(
     getNumber(signals, [
       "price",
@@ -370,22 +314,17 @@ export default function Home() {
       "current_price",
     ])
   );
-
   const entryPrice = formatPrice(
     getNumber(signals, ["entryPrice", "entry_price", "entry", "price"])
   );
-
   const stopLoss = formatPrice(
     getNumber(signals, ["stopLoss", "stop_loss", "sl"])
   );
-
   const takeProfit = formatPrice(
     getNumber(signals, ["takeProfit", "take_profit", "tp"])
   );
-
   const tradesValue = getValue(backtest, ["trades", "results", "history"]);
   const trades: Data[] = Array.isArray(tradesValue) ? tradesValue : [];
-
   const totalTrades = formatNumber(
     getValue(backtest, [
       "totalTrades",
@@ -395,7 +334,6 @@ export default function Home() {
     ]) ?? trades.length,
     0
   );
-
   const wins = formatNumber(
     getValue(backtest, ["wins", "winningTrades", "winning_trades"]) ??
       trades.filter((trade) =>
@@ -405,7 +343,6 @@ export default function Home() {
       ).length,
     0
   );
-
   const losses = formatNumber(
     getValue(backtest, ["losses", "losingTrades", "losing_trades"]) ??
       trades.filter((trade) =>
@@ -415,11 +352,9 @@ export default function Home() {
       ).length,
     0
   );
-
   const winRate = formatNumber(
     getNumber(backtest, ["winRate", "win_rate", "winrate", "winRatePercent"])
   );
-
   const profit = formatNumber(
     getNumber(backtest, [
       "profit",
@@ -429,31 +364,35 @@ export default function Home() {
       "pnl",
     ])
   );
-
   return (
     <main className="app-shell">
       <style jsx global>{`
         * {
           box-sizing: border-box;
         }
-
+        html,
         body {
           margin: 0;
+          padding: 0;
+          width: 100%;
+          max-width: 100%;
+          min-height: 100%;
+          overflow-x: clip;
           background: #08090c;
           color: #f4f4f5;
           font-family: Inter, ui-sans-serif, system-ui, -apple-system,
             BlinkMacSystemFont, "Segoe UI", sans-serif;
         }
-
         button,
         select {
           font: inherit;
         }
-
         .app-shell {
-          min-height: 100vh;
           width: 100%;
+          max-width: 100%;
+          min-height: 100vh;
           padding: 24px;
+          overflow-x: clip;
           background: radial-gradient(
               ellipse at top right,
               rgba(194, 146, 45, 0.11),
@@ -461,29 +400,26 @@ export default function Home() {
             ),
             #08090c;
         }
-
         .container {
           width: 100%;
           max-width: 1200px;
-          margin: 0 auto;
           min-width: 0;
+          margin: 0 auto;
         }
-
         .topbar {
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 16px;
           margin-bottom: 28px;
+          min-width: 0;
         }
-
         .brand {
           display: flex;
           align-items: center;
           gap: 12px;
           min-width: 0;
         }
-
         .brand-mark {
           width: 43px;
           height: 43px;
@@ -496,25 +432,22 @@ export default function Home() {
           font-weight: 900;
           background: #17130a;
         }
-
         .brand-title {
           margin: 0;
           font-size: 21px;
           font-weight: 800;
         }
-
         .subtitle {
           color: #888b95;
           font-size: 12px;
           margin-top: 4px;
         }
-
         .top-actions {
           display: flex;
           align-items: center;
           gap: 10px;
+          flex-shrink: 0;
         }
-
         .live-pill {
           display: flex;
           align-items: center;
@@ -527,14 +460,12 @@ export default function Home() {
           font-size: 11px;
           font-weight: 800;
         }
-
         .live-dot {
           width: 7px;
           height: 7px;
           border-radius: 50%;
           background: #4cdb82;
         }
-
         .icon-button {
           width: 38px;
           height: 38px;
@@ -550,30 +481,25 @@ export default function Home() {
           cursor: pointer;
           padding: 0;
         }
-
         .hamb-line {
           height: 2px;
           background: #e8bd59;
           border-radius: 3px;
           display: block;
         }
-
         .hamb-line:nth-child(1),
         .hamb-line:nth-child(3) {
           width: 16px;
         }
-
         .hamb-line:nth-child(2) {
           width: 11px;
         }
-
         .close-mark {
           position: relative;
           width: 17px;
           height: 17px;
           display: block;
         }
-
         .close-mark::before,
         .close-mark::after {
           content: "";
@@ -585,16 +511,15 @@ export default function Home() {
           background: #e8bd59;
           border-radius: 2px;
         }
-
         .close-mark::before {
           transform: rotate(45deg);
         }
-
         .close-mark::after {
           transform: rotate(-45deg);
         }
-
         .panel {
+          width: 100%;
+          min-width: 0;
           border: 1px solid #282930;
           border-radius: 17px;
           padding: 20px;
@@ -604,89 +529,78 @@ export default function Home() {
             rgba(13, 14, 18, 0.98)
           );
           box-shadow: 0 10px 35px rgba(0, 0, 0, 0.12);
-          min-width: 0;
         }
-
         .panel-heading {
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 12px;
           margin-bottom: 18px;
+          min-width: 0;
         }
-
         .panel-title {
           margin: 0;
           font-size: 15px;
           font-weight: 750;
         }
-
         .gold-text {
           color: #e8bd59 !important;
         }
-
         .metrics-grid {
           display: grid;
           grid-template-columns: repeat(4, minmax(0, 1fr));
           gap: 14px;
+          min-width: 0;
         }
-
         .metric {
+          min-width: 0;
           padding: 17px;
           border: 1px solid #292a31;
           border-radius: 13px;
           background: rgba(255, 255, 255, 0.018);
-          min-width: 0;
         }
-
         .metric-label {
           color: #92939c;
           font-size: 12px;
           margin-bottom: 10px;
         }
-
         .metric-value {
           color: #f3f3f5;
           font-size: clamp(18px, 2.4vw, 25px);
           font-weight: 800;
           overflow-wrap: anywhere;
+          word-break: break-word;
           font-variant-numeric: tabular-nums;
         }
-
         .signal-value {
           font-size: 25px;
           letter-spacing: 0.4px;
         }
-
         .signal-buy,
         .positive {
           color: #54dc94 !important;
         }
-
         .signal-sell,
         .negative {
           color: #ff6e78 !important;
         }
-
         .signal-neutral {
           color: #e8bd59 !important;
         }
-
         .score-grid {
           display: grid;
           grid-template-columns: repeat(2, minmax(0, 1fr));
           gap: 14px;
           margin-top: 14px;
+          min-width: 0;
         }
-
         .score-card {
+          min-width: 0;
           padding: 17px;
           border-radius: 13px;
           border: 1px solid #292a31;
           background: #101116;
-          min-width: 0;
         }
-
         .score-top {
           display: flex;
           justify-content: space-between;
@@ -694,26 +608,21 @@ export default function Home() {
           gap: 10px;
           margin-bottom: 12px;
         }
-
         .score-name {
           font-size: 13px;
           font-weight: 750;
         }
-
         .score-number {
           font-size: 25px;
           font-weight: 850;
           font-variant-numeric: tabular-nums;
         }
-
         .buy-color {
           color: #54dc94;
         }
-
         .sell-color {
           color: #ff6e78;
         }
-
         .bar-track {
           width: 100%;
           height: 8px;
@@ -721,74 +630,69 @@ export default function Home() {
           overflow: hidden;
           background: #282930;
         }
-
         .bar-fill {
           height: 100%;
           border-radius: 999px;
           transition: width 0.35s ease;
         }
-
         .buy-fill {
           background: #39c981;
         }
-
         .sell-fill {
           background: #f05d6c;
         }
-
         .score-note {
           color: #888b95;
           font-size: 11px;
           margin-top: 12px;
           line-height: 1.5;
         }
-
-        /* Desktop: dy panelet ndajne gjeresine ne menyre te balancuar */
+        /* Panelet marrin gjeresine e disponueshme dhe nuk zgjerojne faqen */
         .section-grid {
           display: grid;
           grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
           gap: 14px;
           margin: 18px 0;
           width: 100%;
+          max-width: 100%;
           min-width: 0;
           align-items: start;
         }
-
         .section-grid > .panel {
-          min-width: 0;
           width: 100%;
+          max-width: 100%;
+          min-width: 0;
           padding: 17px;
+          overflow: hidden;
         }
-
         .stats-grid {
           display: grid;
           grid-template-columns: repeat(3, minmax(0, 1fr));
           gap: 12px;
           min-width: 0;
+          width: 100%;
         }
-
         .section-grid .metric {
           min-width: 0;
           padding: 12px;
         }
-
         .section-grid .metric-value {
           font-size: clamp(14px, 1.5vw, 20px);
         }
-
         .table-wrap {
+          display: block;
           width: 100%;
+          max-width: 100%;
           min-width: 0;
           overflow-x: auto;
+          overscroll-behavior-x: contain;
           -webkit-overflow-scrolling: touch;
         }
-
         table {
           width: 100%;
           border-collapse: collapse;
           min-width: 560px;
         }
-
         th,
         td {
           padding: 13px 12px;
@@ -797,22 +701,19 @@ export default function Home() {
           font-size: 12px;
           white-space: nowrap;
         }
-
         th {
           color: #92939c;
           font-weight: 650;
         }
-
         td {
           color: #e4e4e7;
         }
-
         .muted {
           color: #888b95;
           font-size: 12px;
         }
-
         .refresh-button {
+          flex-shrink: 0;
           border: 1px solid #795c24;
           color: #e8bd59;
           background: #211a0d;
@@ -821,12 +722,10 @@ export default function Home() {
           cursor: pointer;
           font-size: 12px;
         }
-
         .refresh-button:disabled {
           opacity: 0.6;
           cursor: wait;
         }
-
         .menu-backdrop {
           position: fixed;
           inset: 0;
@@ -835,7 +734,6 @@ export default function Home() {
           display: flex;
           justify-content: flex-end;
         }
-
         .menu-panel {
           width: min(340px, 88vw);
           height: 100%;
@@ -844,19 +742,16 @@ export default function Home() {
           border-left: 1px solid #383027;
           box-shadow: -20px 0 60px rgba(0, 0, 0, 0.35);
         }
-
         .menu-header {
           display: flex;
           justify-content: space-between;
           align-items: center;
           margin-bottom: 26px;
         }
-
         .menu-title {
           font-size: 17px;
           font-weight: 800;
         }
-
         .menu-close {
           width: 30px;
           height: 30px;
@@ -872,16 +767,15 @@ export default function Home() {
           padding: 0;
           cursor: pointer;
         }
-
         .field-label {
           display: block;
           color: #a1a1aa;
           font-size: 12px;
           margin: 18px 0 8px;
         }
-
         .select-field {
           width: 100%;
+          max-width: 100%;
           padding: 12px;
           color: #f4f4f5;
           background: #1a1b21;
@@ -889,7 +783,6 @@ export default function Home() {
           border-radius: 9px;
           outline: none;
         }
-
         .error-message {
           color: #ff8d94;
           background: #2a1418;
@@ -900,88 +793,186 @@ export default function Home() {
           margin-bottom: 18px;
           overflow-wrap: anywhere;
         }
-
-        @media (max-width: 760px) {
-          .app-shell {
-            padding: 12px;
-            width: 100%;
-            overflow-x: hidden;
-          }
-
-          .container {
-            width: 100%;
-            max-width: 100%;
-          }
-
-          .topbar {
-            align-items: flex-start;
-          }
-
-          .subtitle {
-            max-width: 200px;
-            line-height: 1.4;
-          }
-
-          .live-pill {
-            padding: 7px 9px;
-          }
-
-          .metrics-grid {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 10px;
-          }
-
-          .score-grid,
+        /* Tablet dhe telefon: panelet shtrihen ne nje kolone */
+        @media (max-width: 900px) {
           .section-grid {
             grid-template-columns: minmax(0, 1fr);
             width: 100%;
-            gap: 12px;
+            max-width: 100%;
           }
-
           .section-grid > .panel {
             width: 100%;
-            padding: 14px;
+            max-width: 100%;
           }
-
-          .stats-grid {
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 7px;
+        }
+        @media (max-width: 600px) {
+          .app-shell {
+            width: 100%;
+            max-width: 100%;
+            padding: 12px;
+            overflow-x: clip;
           }
-
-          .section-grid .metric {
-            padding: 9px 7px;
-          }
-
-          .section-grid .metric-label {
-            font-size: 10px;
-            overflow-wrap: anywhere;
-          }
-
-          .section-grid .metric-value {
-            font-size: clamp(13px, 4vw, 18px);
-          }
-
-          .panel {
-            padding: 15px;
+          .container {
+            width: 100%;
+            max-width: 100%;
             min-width: 0;
           }
-
+          .topbar {
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 18px;
+          }
+          .brand {
+            gap: 9px;
+          }
+          .brand-mark {
+            width: 38px;
+            height: 38px;
+          }
+          .brand-title {
+            font-size: 18px;
+          }
+          .subtitle {
+            max-width: 180px;
+            font-size: 11px;
+            line-height: 1.4;
+          }
+          .top-actions {
+            gap: 7px;
+          }
+          .live-pill {
+            padding: 7px 8px;
+            font-size: 10px;
+          }
+          .icon-button {
+            width: 36px;
+            height: 36px;
+          }
+          .panel {
+            padding: 13px;
+            border-radius: 14px;
+          }
+          .panel-heading {
+            gap: 8px;
+            margin-bottom: 14px;
+          }
+          .panel-title {
+            font-size: 14px;
+          }
+          .metrics-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px;
+          }
           .metric {
-            padding: 14px;
+            padding: 12px;
           }
-
+          .metric-label {
+            font-size: 11px;
+            margin-bottom: 7px;
+          }
           .metric-value {
-            font-size: 21px;
+            font-size: 18px;
           }
-
+          .signal-value {
+            font-size: 22px;
+          }
+          .score-grid {
+            grid-template-columns: minmax(0, 1fr);
+            gap: 9px;
+          }
+          .score-card {
+            padding: 13px;
+          }
+          .score-number {
+            font-size: 22px;
+          }
+          .section-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) !important;
+            width: 100%;
+            max-width: 100%;
+            gap: 12px;
+            margin: 12px 0;
+          }
+          .section-grid > .panel {
+            display: block;
+            width: 100% !important;
+            max-width: 100% !important;
+            min-width: 0;
+            padding: 12px;
+            margin: 0;
+            overflow: hidden;
+          }
+          .stats-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 6px;
+            width: 100%;
+          }
+          .section-grid .metric {
+            min-width: 0;
+            padding: 9px 6px;
+          }
+          .section-grid .metric-label {
+            font-size: 10px;
+            line-height: 1.3;
+            overflow-wrap: anywhere;
+          }
+          .section-grid .metric-value {
+            font-size: clamp(12px, 3.7vw, 16px);
+            overflow-wrap: anywhere;
+          }
           .table-wrap {
+            width: 100%;
             max-width: 100%;
             overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
+          }
+          table {
+            min-width: 520px;
+          }
+          th,
+          td {
+            padding: 11px 9px;
+            font-size: 11px;
+          }
+          .refresh-button {
+            padding: 8px 10px;
+            font-size: 11px;
+          }
+          .menu-panel {
+            width: min(340px, 90vw);
+          }
+        }
+        @media (max-width: 360px) {
+          .app-shell {
+            padding: 8px;
+          }
+          .panel {
+            padding: 10px;
+          }
+          .section-grid > .panel {
+            padding: 9px;
+          }
+          .stats-grid {
+            gap: 4px;
+          }
+          .section-grid .metric {
+            padding: 8px 4px;
+          }
+          .section-grid .metric-label {
+            font-size: 9px;
+          }
+          .section-grid .metric-value {
+            font-size: 12px;
+          }
+          .brand-title {
+            font-size: 16px;
+          }
+          .subtitle {
+            max-width: 145px;
+            font-size: 10px;
           }
         }
       `}</style>
-
       <div className="container">
         <header className="topbar">
           <div className="brand">
@@ -991,13 +982,11 @@ export default function Home() {
               <div className="subtitle">{text("subtitle")}</div>
             </div>
           </div>
-
           <div className="top-actions">
             <div className="live-pill">
               <span className="live-dot" />
               {text("live")}
             </div>
-
             <button
               className="icon-button"
               aria-label={menuOpen ? text("close") : text("menu")}
@@ -1015,17 +1004,14 @@ export default function Home() {
             </button>
           </div>
         </header>
-
         {error && (
           <div className="error-message">
             {text("error")} {error}
           </div>
         )}
-
         <section className="panel">
           <div className="panel-heading">
             <h2 className="panel-title">{text("signal")}</h2>
-
             <button
               className="refresh-button"
               onClick={() => void loadData()}
@@ -1034,7 +1020,6 @@ export default function Home() {
               {loading ? text("loading") : text("refresh")}
             </button>
           </div>
-
           <div className="metrics-grid">
             <div className="metric">
               <div className="metric-label">{text("signal")}</div>
@@ -1042,7 +1027,6 @@ export default function Home() {
                 {signalValue}
               </div>
             </div>
-
             <Metric label={text("price")} value={price} />
             <Metric label={text("rsi")} value={formatRSI(scores.rsi)} />
             <Metric label={text("ema9")} value={formatPrice(scores.ema9)} />
@@ -1053,7 +1037,6 @@ export default function Home() {
             <Metric label={text("stopLoss")} value={stopLoss} />
             <Metric label={text("takeProfit")} value={takeProfit} />
           </div>
-
           <div className="score-grid">
             <div className="score-card">
               <div className="score-top">
@@ -1064,7 +1047,6 @@ export default function Home() {
                   {scores.hasData ? `${scores.buy}%` : "—"}
                 </span>
               </div>
-
               <div className="bar-track">
                 <div
                   className="bar-fill buy-fill"
@@ -1072,7 +1054,6 @@ export default function Home() {
                 />
               </div>
             </div>
-
             <div className="score-card">
               <div className="score-top">
                 <span className="score-name sell-color">
@@ -1082,7 +1063,6 @@ export default function Home() {
                   {scores.hasData ? `${scores.sell}%` : "—"}
                 </span>
               </div>
-
               <div className="bar-track">
                 <div
                   className="bar-fill sell-fill"
@@ -1091,32 +1071,26 @@ export default function Home() {
               </div>
             </div>
           </div>
-
           <div className="score-note">
             {!scores.hasData
               ? "Nuk u gjeten te dhenat e nevojshme per score."
               : text("scoreNote")}
           </div>
-
           <div className="muted" style={{ marginTop: 15 }}>
             {lastUpdated ? `${text("refresh")}: ${lastUpdated}` : ""}
           </div>
         </section>
-
         <section className="section-grid">
           <div className="panel">
             <div className="panel-heading">
               <h2 className="panel-title">{text("performance")}</h2>
             </div>
-
             <div className="stats-grid">
               <Metric label={text("totalTrades")} value={totalTrades} />
               <Metric label={text("wins")} value={wins} />
               <Metric label={text("losses")} value={losses} />
             </div>
-
             <div style={{ height: 12 }} />
-
             <div className="stats-grid">
               <Metric
                 label={text("winRate")}
@@ -1127,12 +1101,10 @@ export default function Home() {
               <Metric label={text("price")} value={price} />
             </div>
           </div>
-
           <div className="panel">
             <div className="panel-heading">
               <h2 className="panel-title">{text("recentTrades")}</h2>
             </div>
-
             {trades.length === 0 ? (
               <div className="muted">
                 {loading ? text("loading") : text("noTrades")}
@@ -1149,7 +1121,6 @@ export default function Home() {
                       <th>{text("result")}</th>
                     </tr>
                   </thead>
-
                   <tbody>
                     {trades.slice(0, 10).map((trade, index) => {
                       const result = getValue(trade, [
@@ -1159,14 +1130,12 @@ export default function Home() {
                         "status",
                         "outcome",
                       ]);
-
                       const resultText = String(result ?? "—");
                       const lower = resultText.toLowerCase();
                       const positive =
                         Number(result) > 0 || lower.includes("win");
                       const negative =
                         Number(result) < 0 || lower.includes("loss");
-
                       return (
                         <tr
                           key={String(
@@ -1183,7 +1152,6 @@ export default function Home() {
                               ]) ?? "—"
                             )}
                           </td>
-
                           <td>
                             {String(
                               getValue(trade, [
@@ -1194,7 +1162,6 @@ export default function Home() {
                               ]) ?? "—"
                             )}
                           </td>
-
                           <td>
                             {formatPrice(
                               getNumber(trade, [
@@ -1204,7 +1171,6 @@ export default function Home() {
                               ])
                             )}
                           </td>
-
                           <td>
                             {formatPrice(
                               getNumber(trade, [
@@ -1214,10 +1180,13 @@ export default function Home() {
                               ])
                             )}
                           </td>
-
                           <td
                             className={
-                              positive ? "positive" : negative ? "negative" : ""
+                              positive
+                                ? "positive"
+                                : negative
+                                  ? "negative"
+                                  : ""
                             }
                           >
                             {typeof result === "number"
@@ -1234,7 +1203,6 @@ export default function Home() {
           </div>
         </section>
       </div>
-
       {menuOpen && (
         <div
           className="menu-backdrop"
@@ -1246,7 +1214,6 @@ export default function Home() {
           >
             <div className="menu-header">
               <div className="menu-title">{text("menu")}</div>
-
               <button
                 className="menu-close"
                 aria-label={text("close")}
@@ -1255,7 +1222,6 @@ export default function Home() {
                 ×
               </button>
             </div>
-
             <label className="field-label">{text("language")}</label>
             <select
               className="select-field"
@@ -1268,7 +1234,6 @@ export default function Home() {
                 </option>
               ))}
             </select>
-
             <label className="field-label">{text("timezone")}</label>
             <select
               className="select-field"
@@ -1281,7 +1246,6 @@ export default function Home() {
                 </option>
               ))}
             </select>
-
             <button
               className="refresh-button"
               style={{ width: "100%", marginTop: 24 }}
