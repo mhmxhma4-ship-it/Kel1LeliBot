@@ -1,6 +1,3 @@
-Ja skedari i plotë `app/page.tsx`. Entry Price, TP1, TP2 dhe SL lexohen nga përgjigja e `/api/signals`. Kodi pranon çelësat `entry`/`entryPrice`, `tp1`/`takeProfit1`, `tp2`/`takeProfit2` dhe `sl`/`stopLoss`, edhe të futur brenda `levels` ose `trade`. Kur sinjali është WAIT, shfaqet "—".
-
-```tsx
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
@@ -1862,4 +1859,3 @@ export default function Home() {
     </main>
   );
 }
-```
