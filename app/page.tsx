@@ -857,7 +857,6 @@ export default function Home() {
                 GOLD TRADING SYSTEM
               </div>
             </div>
-          </div>
 
           <button
             aria-label={menuOpen ? t("done") : t("menu")}
