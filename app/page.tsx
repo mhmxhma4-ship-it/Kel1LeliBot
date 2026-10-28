@@ -832,16 +832,18 @@ export default function Home() {
             marginBottom: 22,
           }}
         >
-   <div
-  style={{
-    fontSize: 19,
-    fontWeight: 900,
-    letterSpacing: 1.1,
-    color: "#39ff88",
-  }}
->
-  KeliLelibot
-</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+            <img
+              src="/kelilelibot-logo.png"
+              alt="KeliLelibot"
+              style={{
+                width: 58,
+                height: 58,
+                objectFit: "contain",
+                flexShrink: 0,
+                filter: "drop-shadow(0 0 10px rgba(57,255,136,0.3))",
+              }}
+            />
 
             <div>
               <div
@@ -853,10 +855,12 @@ export default function Home() {
               >
                 Keli<span style={{ color: C.gold }}>Leli</span>bot
               </div>
+
               <div style={{ ...label, fontSize: 9, marginTop: 3 }}>
                 GOLD TRADING SYSTEM
               </div>
             </div>
+          </div>
 
           <button
             aria-label={menuOpen ? t("done") : t("menu")}
