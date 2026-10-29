@@ -94,6 +94,10 @@ const en: Record<string, string> = {
   verifying: "Verifying...",
   invalidCode: "Invalid access code. Please try again.",
   accessNetworkError: "Could not verify the code. Check your connection and try again.",
+  rememberMe: "Save login",
+  accessTimeLeft: "ACCESS TIME LEFT",
+  accessUnlimited: "No time limit",
+  accessExpired: "Access code expired. Please enter a new code.",
   logout: "Log out",
 };
 
@@ -132,6 +136,10 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     enter: "Hyr", verifying: "Duke verifikuar...",
     invalidCode: "Kod i pavlefshëm. Provo përsëri.",
     accessNetworkError: "Kodi nuk u verifikua. Kontrollo lidhjen dhe provo përsëri.",
+    rememberMe: "Ruaj hyrjen",
+    accessTimeLeft: "KOHA E MBETUR E KODIT",
+    accessUnlimited: "Pa afat kohor",
+    accessExpired: "Kodi ka skaduar. Vendos një kod të ri.",
     logout: "Dil",
   },
   el: {
@@ -168,6 +176,10 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     enter: "Είσοδος", verifying: "Επαλήθευση...",
     invalidCode: "Μη έγκυρος κωδικός. Δοκιμάστε ξανά.",
     accessNetworkError: "Αδυναμία επαλήθευσης. Ελέγξτε τη σύνδεση και δοκιμάστε ξανά.",
+    rememberMe: "Αποθήκευση σύνδεσης",
+    accessTimeLeft: "ΥΠΟΛΕΙΠΟΜΕΝΟΣ ΧΡΟΝΟΣ ΚΩΔΙΚΟΥ",
+    accessUnlimited: "Χωρίς χρονικό όριο",
+    accessExpired: "Ο κωδικός έχει λήξει. Εισάγετε νέο κωδικό.",
     logout: "Αποσύνδεση",
   },
   it: {
@@ -204,6 +216,10 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     enter: "Entra", verifying: "Verifica in corso...",
     invalidCode: "Codice non valido. Riprova.",
     accessNetworkError: "Impossibile verificare il codice. Controlla la connessione e riprova.",
+    rememberMe: "Salva accesso",
+    accessTimeLeft: "TEMPO RIMASTO DEL CODICE",
+    accessUnlimited: "Nessun limite di tempo",
+    accessExpired: "Codice scaduto. Inserisci un nuovo codice.",
     logout: "Esci",
   },
   es: {
@@ -240,6 +256,10 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     enter: "Entrar", verifying: "Verificando...",
     invalidCode: "Código no válido. Inténtalo de nuevo.",
     accessNetworkError: "No se pudo verificar el código. Revisa tu conexión e inténtalo de nuevo.",
+    rememberMe: "Guardar sesión",
+    accessTimeLeft: "TIEMPO RESTANTE DEL CÓDIGO",
+    accessUnlimited: "Sin límite de tiempo",
+    accessExpired: "El código ha caducado. Introduce un código nuevo.",
     logout: "Cerrar sesión",
   },
   pt: {
@@ -276,6 +296,10 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     enter: "Entrar", verifying: "A verificar...",
     invalidCode: "Código inválido. Tente novamente.",
     accessNetworkError: "Não foi possível verificar o código. Verifique a ligação e tente novamente.",
+    rememberMe: "Guardar sessão",
+    accessTimeLeft: "TEMPO RESTANTE DO CÓDIGO",
+    accessUnlimited: "Sem limite de tempo",
+    accessExpired: "O código expirou. Introduza um novo código.",
     logout: "Sair",
   },
   fr: {
@@ -312,6 +336,10 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     enter: "Entrer", verifying: "Vérification...",
     invalidCode: "Code invalide. Veuillez réessayer.",
     accessNetworkError: "Impossible de vérifier le code. Vérifiez votre connexion et réessayez.",
+    rememberMe: "Enregistrer la connexion",
+    accessTimeLeft: "TEMPS RESTANT DU CODE",
+    accessUnlimited: "Aucune limite de temps",
+    accessExpired: "Le code a expiré. Saisissez un nouveau code.",
     logout: "Déconnexion",
   },
   de: {
@@ -347,6 +375,10 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     enter: "Anmelden", verifying: "Wird überprüft...",
     invalidCode: "Ungültiger Zugangscode. Bitte versuche es erneut.",
     accessNetworkError: "Code konnte nicht überprüft werden. Prüfe deine Verbindung und versuche es erneut.",
+    rememberMe: "Anmeldung speichern",
+    accessTimeLeft: "VERBLEIBENDE ZEIT DES CODES",
+    accessUnlimited: "Keine Zeitbegrenzung",
+    accessExpired: "Der Code ist abgelaufen. Bitte gib einen neuen Code ein.",
     logout: "Abmelden",
   },
   tr: {
@@ -382,6 +414,10 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     enter: "Giriş", verifying: "Doğrulanıyor...",
     invalidCode: "Geçersiz erişim kodu. Lütfen tekrar dene.",
     accessNetworkError: "Kod doğrulanamadı. Bağlantını kontrol edip tekrar dene.",
+    rememberMe: "Girişi kaydet",
+    accessTimeLeft: "KODUN KALAN SÜRESİ",
+    accessUnlimited: "Süre sınırı yok",
+    accessExpired: "Kodun süresi doldu. Lütfen yeni bir kod gir.",
     logout: "Çıkış yap",
   },
   ar: {
@@ -417,6 +453,10 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     enter: "دخول", verifying: "جارٍ التحقق...",
     invalidCode: "رمز الوصول غير صالح. حاول مرة أخرى.",
     accessNetworkError: "تعذر التحقق من الرمز. تحقق من اتصالك وحاول مرة أخرى.",
+    rememberMe: "حفظ تسجيل الدخول",
+    accessTimeLeft: "الوقت المتبقي للرمز",
+    accessUnlimited: "بدون حد زمني",
+    accessExpired: "انتهت صلاحية الرمز. أدخل رمزًا جديدًا.",
     logout: "تسجيل الخروج",
   },
   ru: {
@@ -453,6 +493,10 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     enter: "Войти", verifying: "Проверка...",
     invalidCode: "Неверный код доступа. Попробуйте ещё раз.",
     accessNetworkError: "Не удалось проверить код. Проверьте соединение и повторите попытку.",
+    rememberMe: "Сохранить вход",
+    accessTimeLeft: "ОСТАВШЕЕСЯ ВРЕМЯ КОДА",
+    accessUnlimited: "Без ограничения по времени",
+    accessExpired: "Срок действия кода истёк. Введите новый код.",
     logout: "Выйти",
   },
   "pt-BR": {
@@ -489,6 +533,10 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     enter: "Entrar", verifying: "Verificando...",
     invalidCode: "Código inválido. Tente novamente.",
     accessNetworkError: "Não foi possível verificar o código. Verifique sua conexão e tente novamente.",
+    rememberMe: "Salvar login",
+    accessTimeLeft: "TEMPO RESTANTE DO CÓDIGO",
+    accessUnlimited: "Sem limite de tempo",
+    accessExpired: "O código expirou. Digite um novo código.",
     logout: "Sair",
   },
   ja: {
@@ -524,6 +572,10 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     enter: "ログイン", verifying: "確認中...",
     invalidCode: "アクセスコードが無効です。もう一度お試しください。",
     accessNetworkError: "コードを確認できませんでした。接続を確認して再試行してください。",
+    rememberMe: "ログイン情報を保存",
+    accessTimeLeft: "コードの残り時間",
+    accessUnlimited: "期限なし",
+    accessExpired: "コードの有効期限が切れました。新しいコードを入力してください。",
     logout: "ログアウト",
   },
   zh: {
@@ -558,6 +610,10 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     enter: "进入", verifying: "验证中...",
     invalidCode: "访问码无效,请重试。",
     accessNetworkError: "无法验证访问码,请检查网络后重试。",
+    rememberMe: "保存登录",
+    accessTimeLeft: "访问码剩余时间",
+    accessUnlimited: "无时间限制",
+    accessExpired: "访问码已过期,请输入新的访问码。",
     logout: "退出登录",
   },
 };
@@ -689,12 +745,60 @@ function first(data: Data | null, ...keys: string[]) {
   return undefined;
 }
 
+type AccessResult = { ok: boolean; expiresAt: number | null };
+
+/** Removes a saved access code from both persistent and session storage. */
+function clearSavedAccess() {
+  try {
+    localStorage.removeItem(ACCESS_STORAGE_KEY);
+  } catch {
+    // Ignore unavailable local storage.
+  }
+  try {
+    sessionStorage.removeItem(ACCESS_STORAGE_KEY);
+  } catch {
+    // Ignore unavailable session storage.
+  }
+}
+
+/**
+ * Reads the expiry time (as a ms timestamp) out of the /api/access response.
+ * Supports an absolute timestamp/date or a relative "seconds left" value.
+ * Returns null when the server does not report any expiry.
+ */
+function parseExpiry(data: Data | null): number | null {
+  if (!data) return null;
+
+  const abs = first(
+    data,
+    "expiresAt", "expires_at", "expiry", "expires", "exp", "validUntil", "valid_until"
+  );
+
+  if (abs !== undefined) {
+    const n = Number(abs);
+    if (Number.isFinite(n)) return n < 1e12 ? n * 1000 : n;
+
+    const d = new Date(String(abs)).getTime();
+    if (Number.isFinite(d)) return d;
+  }
+
+  const secs = numberFrom(
+    first(data, "remainingSeconds", "remaining_seconds", "expiresIn", "expires_in", "secondsLeft")
+  );
+  if (secs !== null) return Date.now() + secs * 1000;
+
+  const ms = numberFrom(first(data, "remainingMs", "remaining_ms"));
+  if (ms !== null) return Date.now() + ms;
+
+  return null;
+}
+
 /**
  * Verifies the access code with the existing /api/access endpoint.
- * Returns true when accepted, false when rejected.
- * Throws when the server cannot be reached or returns an unexpected error.
+ * Returns { ok, expiresAt }. Throws when the server cannot be reached
+ * or returns an unexpected error.
  */
-async function verifyAccessCode(code: string): Promise<boolean> {
+async function verifyAccessCode(code: string): Promise<AccessResult> {
   const response = await fetch(ACCESS_ENDPOINT, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -709,7 +813,9 @@ async function verifyAccessCode(code: string): Promise<boolean> {
     data = null;
   }
 
-  if ([400, 401, 403].includes(response.status)) return false;
+  if ([400, 401, 403].includes(response.status)) {
+    return { ok: false, expiresAt: null };
+  }
 
   if (!response.ok) {
     throw new Error(data?.error || `HTTP ${response.status}`);
@@ -717,12 +823,15 @@ async function verifyAccessCode(code: string): Promise<boolean> {
 
   if (data && typeof data === "object") {
     for (const key of ["ok", "success", "authorized", "valid", "granted", "access"]) {
-      if (typeof data[key] === "boolean") return data[key] as boolean;
+      if (typeof data[key] === "boolean") {
+        const accepted = data[key] as boolean;
+        return { ok: accepted, expiresAt: accepted ? parseExpiry(data) : null };
+      }
     }
-    if (data.error) return false;
+    if (data.error) return { ok: false, expiresAt: null };
   }
 
-  return true;
+  return { ok: true, expiresAt: parseExpiry(data) };
 }
 
 function KLLogo({ size = 58, gradientId = "kl-neon" }: { size?: number; gradientId?: string }) {
@@ -774,7 +883,10 @@ export default function Home() {
   const [authorized, setAuthorized] = useState(false);
   const [accessCode, setAccessCode] = useState("");
   const [accessLoading, setAccessLoading] = useState(false);
-  const [accessError, setAccessError] = useState<"" | "invalid" | "network">("");
+  const [accessError, setAccessError] = useState<"" | "invalid" | "network" | "expired">("");
+  const [rememberLogin, setRememberLogin] = useState(true);
+  const [expiresAt, setExpiresAt] = useState<number | null>(null);
+  const [timeLeft, setTimeLeft] = useState("");
 
   const [signal, setSignal] = useState<Data | null>(null);
   const [backtest, setBacktest] = useState<Data | null>(null);
@@ -807,16 +919,47 @@ export default function Home() {
     setLanguageReady(true);
   }, []);
 
+  // Auto-login: re-verify a saved access code (if any) with /api/access.
   useEffect(() => {
-    try {
-      if (sessionStorage.getItem(ACCESS_STORAGE_KEY) === "granted") {
-        setAuthorized(true);
-      }
-    } catch {
-      // Session storage may be unavailable; the user will simply log in again.
-    }
+    let cancelled = false;
 
-    setAccessChecked(true);
+    (async () => {
+      let saved: string | null = null;
+
+      try {
+        saved =
+          localStorage.getItem(ACCESS_STORAGE_KEY) ||
+          sessionStorage.getItem(ACCESS_STORAGE_KEY);
+      } catch {
+        // Storage may be unavailable; the user will simply log in again.
+      }
+
+      if (saved === "granted") {
+        // Legacy value from the previous version.
+        clearSavedAccess();
+      } else if (saved) {
+        try {
+          const result = await verifyAccessCode(saved);
+
+          if (!cancelled) {
+            if (result.ok) {
+              setExpiresAt(result.expiresAt);
+              setAuthorized(true);
+            } else {
+              clearSavedAccess();
+            }
+          }
+        } catch {
+          // Network error: stay on the login screen and keep the saved code.
+        }
+      }
+
+      if (!cancelled) setAccessChecked(true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -912,14 +1055,20 @@ export default function Home() {
     setAccessError("");
 
     try {
-      const accepted = await verifyAccessCode(code);
+      const result = await verifyAccessCode(code);
 
-      if (accepted) {
+      if (result.ok) {
         try {
-          sessionStorage.setItem(ACCESS_STORAGE_KEY, "granted");
+          clearSavedAccess();
+          (rememberLogin ? localStorage : sessionStorage).setItem(
+            ACCESS_STORAGE_KEY,
+            code
+          );
         } catch {
           // Access still works for the current page session.
         }
+
+        setExpiresAt(result.expiresAt);
         setAccessCode("");
         setAuthorized(true);
       } else {
@@ -933,11 +1082,7 @@ export default function Home() {
   };
 
   const handleLogout = () => {
-    try {
-      sessionStorage.removeItem(ACCESS_STORAGE_KEY);
-    } catch {
-      // Ignore unavailable session storage.
-    }
+    clearSavedAccess();
 
     setMenuOpen(false);
     setSignal(null);
@@ -948,8 +1093,40 @@ export default function Home() {
     setBacktestError("");
     setAccessCode("");
     setAccessError("");
+    setExpiresAt(null);
     setAuthorized(false);
   };
+
+  // Live countdown of the remaining access time.
+  useEffect(() => {
+    if (!authorized || !expiresAt) {
+      setTimeLeft("");
+      return;
+    }
+
+    const tick = () => {
+      const ms = expiresAt - Date.now();
+
+      if (ms <= 0) {
+        handleLogout();
+        setAccessError("expired");
+        return;
+      }
+
+      const d = Math.floor(ms / 86400000);
+      const h = String(Math.floor(ms / 3600000) % 24).padStart(2, "0");
+      const m = String(Math.floor(ms / 60000) % 60).padStart(2, "0");
+      const s = String(Math.floor(ms / 1000) % 60).padStart(2, "0");
+
+      setTimeLeft(d > 0 ? `${d}d ${h}:${m}:${s}` : `${h}:${m}:${s}`);
+    };
+
+    tick();
+    const id = window.setInterval(tick, 1000);
+
+    return () => window.clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authorized, expiresAt]);
 
   if (!accessChecked) {
     return <main style={{ minHeight: "100vh", background: "#000" }} />;
@@ -961,7 +1138,9 @@ export default function Home() {
         ? t("invalidCode")
         : accessError === "network"
           ? t("accessNetworkError")
-          : "";
+          : accessError === "expired"
+            ? t("accessExpired")
+            : "";
 
     return (
       <main
@@ -1239,6 +1418,26 @@ export default function Home() {
                   outline: "none",
                 }}
               />
+
+              <label
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 9,
+                  marginTop: 14,
+                  color: GOLD_SOFT,
+                  fontSize: 13,
+                  cursor: "pointer",
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={rememberLogin}
+                  onChange={(event) => setRememberLogin(event.target.checked)}
+                  style={{ accentColor: "#39ff88", width: 16, height: 16 }}
+                />
+                {t("rememberMe")}
+              </label>
 
               <div
                 id="access-error"
@@ -1850,6 +2049,30 @@ export default function Home() {
                     </option>
                   ))}
                 </select>
+              </div>
+            </div>
+
+            <div
+              style={{
+                marginTop: 17,
+                padding: 13,
+                borderRadius: 11,
+                background: "rgba(57,255,136,0.05)",
+                border: `1px solid ${C.border}`,
+              }}
+            >
+              <div style={label}>{t("accessTimeLeft")}</div>
+
+              <div
+                style={{
+                  marginTop: 7,
+                  fontSize: 20,
+                  fontWeight: 850,
+                  color: C.gold2,
+                  fontVariantNumeric: "tabular-nums",
+                }}
+              >
+                {expiresAt ? timeLeft : t("accessUnlimited")}
               </div>
             </div>
 
