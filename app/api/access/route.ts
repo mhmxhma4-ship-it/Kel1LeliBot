@@ -1,4 +1,3 @@
-
 import { NextRequest, NextResponse } from "next/server";
 import { validateAccessCode } from "@/lib/access";
 import { createHmac, timingSafeEqual } from "node:crypto";
@@ -14,17 +13,19 @@ type SessionPayload = {
   createdAt: number;
 };
 
-function signSession(value: string) {
+function signSession(value: string): string {
   const secret = process.env.ACCESS_ADMIN_SECRET;
 
   if (!secret) {
     throw new Error("Mungon ACCESS_ADMIN_SECRET ne server.");
   }
 
-  return createHmac("sha256", secret).update(value).digest("hex");
+  return createHmac("sha256", secret)
+    .update(value)
+    .digest("hex");
 }
 
-function createSessionToken(expiresAt: string | null) {
+function createSessionToken(expiresAt: string | null): string {
   const payload = Buffer.from(
     JSON.stringify({
       access: true,
@@ -39,6 +40,7 @@ function createSessionToken(expiresAt: string | null) {
 function readSessionToken(token: string): SessionPayload | null {
   try {
     const separator = token.lastIndexOf(".");
+
     if (separator <= 0) return null;
 
     const payload = token.slice(0, separator);
@@ -47,13 +49,13 @@ function readSessionToken(token: string): SessionPayload | null {
     if (!payload || !signature) return null;
 
     const expected = signSession(payload);
-    const a = Buffer.from(signature, "hex");
-    const b = Buffer.from(expected, "hex");
+    const actualBuffer = Buffer.from(signature, "hex");
+    const expectedBuffer = Buffer.from(expected, "hex");
 
     if (
-      a.length !== b.length ||
-      a.length === 0 ||
-      !timingSafeEqual(a, b)
+      actualBuffer.length !== expectedBuffer.length ||
+      actualBuffer.length === 0 ||
+      !timingSafeEqual(actualBuffer, expectedBuffer)
     ) {
       return null;
     }
@@ -113,8 +115,11 @@ function cookieOptions(expiresAt: string | null) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => null);
+
     const code =
-      typeof body?.code === "string" ? body.code.trim() : "";
+      typeof body?.code === "string"
+        ? body.code.trim()
+        : "";
 
     if (!code || code.length > 100) {
       return NextResponse.json(
@@ -150,6 +155,7 @@ export async function POST(request: NextRequest) {
       success: true,
       authorized: true,
       expiresAt: result.expiresAt,
+      permanent: result.expiresAt === null,
     });
 
     response.cookies.set(
@@ -219,7 +225,9 @@ export async function GET(request: NextRequest) {
 }
 
 export async function DELETE() {
-  const response = NextResponse.json({ success: true });
+  const response = NextResponse.json({
+    success: true,
+  });
 
   response.cookies.set(COOKIE_NAME, "", {
     httpOnly: true,
