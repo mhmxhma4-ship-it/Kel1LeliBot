@@ -8,6 +8,9 @@ type Lang =
 
 type Data = Record<string, any>;
 
+const ACCESS_ENDPOINT = "/api/access";
+const ACCESS_STORAGE_KEY = "kelilelibot-access";
+
 const languages: { code: Lang; name: string; flag: string }[] = [
   { code: "sq", name: "Shqip", flag: "🇦🇱" },
   { code: "en", name: "English", flag: "🇬🇧" },
@@ -83,6 +86,15 @@ const en: Record<string, string> = {
   takeProfit1: "Take Profit 1",
   takeProfit2: "Take Profit 2",
   stopLoss: "Stop Loss",
+  accessTitle: "Private access",
+  accessSubtitle: "Enter your access code to open the gold trading dashboard.",
+  accessCode: "ACCESS CODE",
+  accessPlaceholder: "Enter your code",
+  enter: "Enter",
+  verifying: "Verifying...",
+  invalidCode: "Invalid access code. Please try again.",
+  accessNetworkError: "Could not verify the code. Check your connection and try again.",
+  logout: "Log out",
 };
 
 const translations: Partial<Record<Lang, Record<string, string>>> = {
@@ -114,6 +126,13 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     systemTime: "Ora përditësohet automatikisht",
     entryPrice: "Çmimi i hyrjes", takeProfit1: "Take Profit 1",
     takeProfit2: "Take Profit 2", stopLoss: "Stop Loss",
+    accessTitle: "Qasje private",
+    accessSubtitle: "Vendos kodin e aksesit për të hapur panelin e tregtimit të arit.",
+    accessCode: "KODI I AKSESIT", accessPlaceholder: "Shkruaj kodin",
+    enter: "Hyr", verifying: "Duke verifikuar...",
+    invalidCode: "Kod i pavlefshëm. Provo përsëri.",
+    accessNetworkError: "Kodi nuk u verifikua. Kontrollo lidhjen dhe provo përsëri.",
+    logout: "Dil",
   },
   el: {
     menu: "Μενού", language: "Γλώσσα", timezone: "Ζώνη ώρας",
@@ -143,6 +162,13 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     systemTime: "Το ρολόι ενημερώνεται αυτόματα",
     entryPrice: "Τιμή εισόδου", takeProfit1: "Take Profit 1",
     takeProfit2: "Take Profit 2", stopLoss: "Stop Loss",
+    accessTitle: "Ιδιωτική πρόσβαση",
+    accessSubtitle: "Εισάγετε τον κωδικό πρόσβασης για να ανοίξετε τον πίνακα συναλλαγών χρυσού.",
+    accessCode: "ΚΩΔΙΚΟΣ ΠΡΟΣΒΑΣΗΣ", accessPlaceholder: "Εισάγετε τον κωδικό",
+    enter: "Είσοδος", verifying: "Επαλήθευση...",
+    invalidCode: "Μη έγκυρος κωδικός. Δοκιμάστε ξανά.",
+    accessNetworkError: "Αδυναμία επαλήθευσης. Ελέγξτε τη σύνδεση και δοκιμάστε ξανά.",
+    logout: "Αποσύνδεση",
   },
   it: {
     menu: "Menu", language: "Lingua", timezone: "Fuso orario",
@@ -172,6 +198,13 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     systemTime: "L'orologio si aggiorna automaticamente",
     entryPrice: "Prezzo di ingresso", takeProfit1: "Take Profit 1",
     takeProfit2: "Take Profit 2", stopLoss: "Stop Loss",
+    accessTitle: "Accesso privato",
+    accessSubtitle: "Inserisci il codice di accesso per aprire la dashboard di trading sull'oro.",
+    accessCode: "CODICE DI ACCESSO", accessPlaceholder: "Inserisci il codice",
+    enter: "Entra", verifying: "Verifica in corso...",
+    invalidCode: "Codice non valido. Riprova.",
+    accessNetworkError: "Impossibile verificare il codice. Controlla la connessione e riprova.",
+    logout: "Esci",
   },
   es: {
     menu: "Menú", language: "Idioma", timezone: "Zona horaria",
@@ -201,6 +234,13 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     systemTime: "El reloj se actualiza automáticamente",
     entryPrice: "Precio de entrada", takeProfit1: "Take Profit 1",
     takeProfit2: "Take Profit 2", stopLoss: "Stop Loss",
+    accessTitle: "Acceso privado",
+    accessSubtitle: "Introduce tu código de acceso para abrir el panel de trading de oro.",
+    accessCode: "CÓDIGO DE ACCESO", accessPlaceholder: "Introduce el código",
+    enter: "Entrar", verifying: "Verificando...",
+    invalidCode: "Código no válido. Inténtalo de nuevo.",
+    accessNetworkError: "No se pudo verificar el código. Revisa tu conexión e inténtalo de nuevo.",
+    logout: "Cerrar sesión",
   },
   pt: {
     menu: "Menu", language: "Idioma", timezone: "Fuso horário",
@@ -230,6 +270,13 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     systemTime: "O relógio é atualizado automaticamente",
     entryPrice: "Preço de entrada", takeProfit1: "Take Profit 1",
     takeProfit2: "Take Profit 2", stopLoss: "Stop Loss",
+    accessTitle: "Acesso privado",
+    accessSubtitle: "Introduza o código de acesso para abrir o painel de trading de ouro.",
+    accessCode: "CÓDIGO DE ACESSO", accessPlaceholder: "Introduza o código",
+    enter: "Entrar", verifying: "A verificar...",
+    invalidCode: "Código inválido. Tente novamente.",
+    accessNetworkError: "Não foi possível verificar o código. Verifique a ligação e tente novamente.",
+    logout: "Sair",
   },
   fr: {
     menu: "Menu", language: "Langue", timezone: "Fuseau horaire",
@@ -259,6 +306,13 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     systemTime: "L'horloge se met à jour automatiquement",
     entryPrice: "Prix d'entrée", takeProfit1: "Take Profit 1",
     takeProfit2: "Take Profit 2", stopLoss: "Stop Loss",
+    accessTitle: "Accès privé",
+    accessSubtitle: "Saisissez votre code d'accès pour ouvrir le tableau de bord de trading sur l'or.",
+    accessCode: "CODE D'ACCÈS", accessPlaceholder: "Saisissez le code",
+    enter: "Entrer", verifying: "Vérification...",
+    invalidCode: "Code invalide. Veuillez réessayer.",
+    accessNetworkError: "Impossible de vérifier le code. Vérifiez votre connexion et réessayez.",
+    logout: "Déconnexion",
   },
   de: {
     menu: "Menü", language: "Sprache", timezone: "Zeitzone",
@@ -287,6 +341,13 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     systemTime: "Uhrzeit wird automatisch aktualisiert",
     entryPrice: "Einstiegspreis", takeProfit1: "Take Profit 1",
     takeProfit2: "Take Profit 2", stopLoss: "Stop Loss",
+    accessTitle: "Privater Zugang",
+    accessSubtitle: "Gib deinen Zugangscode ein, um das Gold-Trading-Dashboard zu öffnen.",
+    accessCode: "ZUGANGSCODE", accessPlaceholder: "Code eingeben",
+    enter: "Anmelden", verifying: "Wird überprüft...",
+    invalidCode: "Ungültiger Zugangscode. Bitte versuche es erneut.",
+    accessNetworkError: "Code konnte nicht überprüft werden. Prüfe deine Verbindung und versuche es erneut.",
+    logout: "Abmelden",
   },
   tr: {
     menu: "Menü", language: "Dil", timezone: "Saat dilimi",
@@ -315,6 +376,13 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     systemTime: "Saat otomatik güncellenir",
     entryPrice: "Giriş fiyatı", takeProfit1: "Take Profit 1",
     takeProfit2: "Take Profit 2", stopLoss: "Stop Loss",
+    accessTitle: "Özel erişim",
+    accessSubtitle: "Altın işlem panosunu açmak için erişim kodunu gir.",
+    accessCode: "ERİŞİM KODU", accessPlaceholder: "Kodu gir",
+    enter: "Giriş", verifying: "Doğrulanıyor...",
+    invalidCode: "Geçersiz erişim kodu. Lütfen tekrar dene.",
+    accessNetworkError: "Kod doğrulanamadı. Bağlantını kontrol edip tekrar dene.",
+    logout: "Çıkış yap",
   },
   ar: {
     menu: "القائمة", language: "اللغة", timezone: "المنطقة الزمنية",
@@ -343,6 +411,13 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     systemTime: "يتم تحديث الساعة تلقائيًا",
     entryPrice: "سعر الدخول", takeProfit1: "جني الأرباح 1",
     takeProfit2: "جني الأرباح 2", stopLoss: "وقف الخسارة",
+    accessTitle: "وصول خاص",
+    accessSubtitle: "أدخل رمز الوصول لفتح لوحة تداول الذهب.",
+    accessCode: "رمز الوصول", accessPlaceholder: "أدخل الرمز",
+    enter: "دخول", verifying: "جارٍ التحقق...",
+    invalidCode: "رمز الوصول غير صالح. حاول مرة أخرى.",
+    accessNetworkError: "تعذر التحقق من الرمز. تحقق من اتصالك وحاول مرة أخرى.",
+    logout: "تسجيل الخروج",
   },
   ru: {
     menu: "Меню", language: "Язык", timezone: "Часовой пояс",
@@ -372,6 +447,13 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     systemTime: "Время обновляется автоматически",
     entryPrice: "Цена входа", takeProfit1: "Тейк-профит 1",
     takeProfit2: "Тейк-профит 2", stopLoss: "Стоп-лосс",
+    accessTitle: "Закрытый доступ",
+    accessSubtitle: "Введите код доступа, чтобы открыть панель торговли золотом.",
+    accessCode: "КОД ДОСТУПА", accessPlaceholder: "Введите код",
+    enter: "Войти", verifying: "Проверка...",
+    invalidCode: "Неверный код доступа. Попробуйте ещё раз.",
+    accessNetworkError: "Не удалось проверить код. Проверьте соединение и повторите попытку.",
+    logout: "Выйти",
   },
   "pt-BR": {
     menu: "Menu", language: "Idioma", timezone: "Fuso horário",
@@ -401,6 +483,13 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     systemTime: "O relógio é atualizado automaticamente",
     entryPrice: "Preço de entrada", takeProfit1: "Take Profit 1",
     takeProfit2: "Take Profit 2", stopLoss: "Stop Loss",
+    accessTitle: "Acesso privado",
+    accessSubtitle: "Digite o código de acesso para abrir o painel de trading de ouro.",
+    accessCode: "CÓDIGO DE ACESSO", accessPlaceholder: "Digite o código",
+    enter: "Entrar", verifying: "Verificando...",
+    invalidCode: "Código inválido. Tente novamente.",
+    accessNetworkError: "Não foi possível verificar o código. Verifique sua conexão e tente novamente.",
+    logout: "Sair",
   },
   ja: {
     menu: "メニュー", language: "言語", timezone: "タイムゾーン",
@@ -429,6 +518,13 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     noSignal: "シグナルデータがありません", systemTime: "時計は自動更新されます",
     entryPrice: "エントリー価格", takeProfit1: "利確 1",
     takeProfit2: "利確 2", stopLoss: "損切り",
+    accessTitle: "プライベートアクセス",
+    accessSubtitle: "アクセスコードを入力して、ゴールド取引ダッシュボードを開きます。",
+    accessCode: "アクセスコード", accessPlaceholder: "コードを入力",
+    enter: "ログイン", verifying: "確認中...",
+    invalidCode: "アクセスコードが無効です。もう一度お試しください。",
+    accessNetworkError: "コードを確認できませんでした。接続を確認して再試行してください。",
+    logout: "ログアウト",
   },
   zh: {
     menu: "菜单", language: "语言", timezone: "时区",
@@ -456,6 +552,13 @@ const translations: Partial<Record<Lang, Record<string, string>>> = {
     noSignal: "暂无信号数据", systemTime: "时钟自动更新",
     entryPrice: "入场价格", takeProfit1: "止盈 1",
     takeProfit2: "止盈 2", stopLoss: "止损",
+    accessTitle: "私人访问",
+    accessSubtitle: "输入访问码以打开黄金交易仪表板。",
+    accessCode: "访问码", accessPlaceholder: "输入访问码",
+    enter: "进入", verifying: "验证中...",
+    invalidCode: "访问码无效,请重试。",
+    accessNetworkError: "无法验证访问码,请检查网络后重试。",
+    logout: "退出登录",
   },
 };
 
@@ -483,6 +586,10 @@ const C = {
   green: "#39ff88",
   red: "#ff6577",
 };
+
+const GOLD = "#d4af37";
+const GOLD_SOFT = "#f0d98a";
+
 const panel: React.CSSProperties = {
   background: "linear-gradient(145deg, #131417, #0d0e10)",
   border: `1px solid ${C.border}`,
@@ -497,6 +604,26 @@ const label: React.CSSProperties = {
   letterSpacing: 1.2,
   fontWeight: 700,
 };
+
+// Decorative candlestick data for the access screen (static, no randomness).
+const CHART_CANDLES = Array.from({ length: 30 }, (_, i) => {
+  const x = 30 + i * 40;
+  const base = 330 - i * 4 + Math.sin(i * 0.8) * 34 + Math.cos(i * 0.35) * 20;
+  const body = 12 + Math.abs(Math.sin(i * 1.7)) * 30;
+  const up = Math.sin(i * 2.3) > -0.3;
+  const open = base;
+  const close = up ? base - body : base + body;
+  const high = Math.min(open, close) - (6 + Math.abs(Math.cos(i * 1.3)) * 18);
+  const low = Math.max(open, close) + (6 + Math.abs(Math.sin(i * 0.9)) * 18);
+  return { x, open, close, high, low, up };
+});
+
+const CHART_LINE_D =
+  "M" + CHART_CANDLES.map((c) => `${c.x} ${c.close.toFixed(1)}`).join(" L");
+
+const CHART_AREA_D = `${CHART_LINE_D} L${CHART_CANDLES[CHART_CANDLES.length - 1].x} 600 L${CHART_CANDLES[0].x} 600 Z`;
+
+const CHART_LAST_Y = CHART_CANDLES[CHART_CANDLES.length - 1].close;
 
 function numberFrom(...values: any[]): number | null {
   for (const value of values) {
@@ -562,11 +689,92 @@ function first(data: Data | null, ...keys: string[]) {
   return undefined;
 }
 
+/**
+ * Verifies the access code with the existing /api/access endpoint.
+ * Returns true when accepted, false when rejected.
+ * Throws when the server cannot be reached or returns an unexpected error.
+ */
+async function verifyAccessCode(code: string): Promise<boolean> {
+  const response = await fetch(ACCESS_ENDPOINT, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ code }),
+    cache: "no-store",
+  });
+
+  let data: Data | null = null;
+  try {
+    data = await response.json();
+  } catch {
+    data = null;
+  }
+
+  if ([400, 401, 403].includes(response.status)) return false;
+
+  if (!response.ok) {
+    throw new Error(data?.error || `HTTP ${response.status}`);
+  }
+
+  if (data && typeof data === "object") {
+    for (const key of ["ok", "success", "authorized", "valid", "granted", "access"]) {
+      if (typeof data[key] === "boolean") return data[key] as boolean;
+    }
+    if (data.error) return false;
+  }
+
+  return true;
+}
+
+function KLLogo({ size = 58, gradientId = "kl-neon" }: { size?: number; gradientId?: string }) {
+  return (
+    <svg
+      width={size}
+      height={size}
+      viewBox="0 0 100 100"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+      style={{
+        flexShrink: 0,
+        filter: "drop-shadow(0 0 9px rgba(57,255,136,0.45))",
+      }}
+    >
+      <defs>
+        <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#7DFFAD" />
+          <stop offset="100%" stopColor="#39FF88" />
+        </linearGradient>
+      </defs>
+      <rect x="3" y="3" width="94" height="94" rx="24" fill="#050706" stroke="#39FF88" strokeWidth="2" />
+      <path d="M50 13V22M43 13H57" stroke="#39FF88" strokeWidth="3" strokeLinecap="round" />
+      <path
+        d="M25 39Q25 29 36 29H64Q75 29 75 39V59Q75 69 64 69H36Q25 69 25 59Z"
+        fill="#101812"
+        stroke={`url(#${gradientId})`}
+        strokeWidth="2.5"
+      />
+      <rect x="34" y="40" width="11" height="11" rx="3" fill="#39FF88" />
+      <rect x="55" y="40" width="11" height="11" rx="3" fill="#39FF88" />
+      <path d="M39 59H61" stroke="#7DFFAD" strokeWidth="3" strokeLinecap="round" />
+      <path d="M18 42H25M75 42H82M18 55H25M75 55H82" stroke="#39FF88" strokeWidth="2.5" strokeLinecap="round" />
+      <text x="50" y="86" textAnchor="middle" fill="#7DFFAD" fontSize="14" fontWeight="900" letterSpacing="2">
+        KL
+      </text>
+    </svg>
+  );
+}
+
 export default function Home() {
   const [language, setLanguage] = useState<Lang>("sq");
   const [languageReady, setLanguageReady] = useState(false);
   const [selectedZone, setSelectedZone] = useState("Europe/Athens");
   const [menuOpen, setMenuOpen] = useState(false);
+
+  const [accessChecked, setAccessChecked] = useState(false);
+  const [authorized, setAuthorized] = useState(false);
+  const [accessCode, setAccessCode] = useState("");
+  const [accessLoading, setAccessLoading] = useState(false);
+  const [accessError, setAccessError] = useState<"" | "invalid" | "network">("");
 
   const [signal, setSignal] = useState<Data | null>(null);
   const [backtest, setBacktest] = useState<Data | null>(null);
@@ -597,6 +805,18 @@ export default function Home() {
     }
 
     setLanguageReady(true);
+  }, []);
+
+  useEffect(() => {
+    try {
+      if (sessionStorage.getItem(ACCESS_STORAGE_KEY) === "granted") {
+        setAuthorized(true);
+      }
+    } catch {
+      // Session storage may be unavailable; the user will simply log in again.
+    }
+
+    setAccessChecked(true);
   }, []);
 
   useEffect(() => {
@@ -665,6 +885,9 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    // The dashboard only loads data after the user is authorized.
+    if (!authorized) return;
+
     void refreshSignal();
     void refreshBacktest();
 
@@ -677,7 +900,530 @@ export default function Home() {
       window.clearInterval(backtestTimer);
       window.clearInterval(clockTimer);
     };
-  }, [refreshSignal, refreshBacktest]);
+  }, [authorized, refreshSignal, refreshBacktest]);
+
+  const handleAccessSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const code = accessCode.trim();
+    if (!code || accessLoading) return;
+
+    setAccessLoading(true);
+    setAccessError("");
+
+    try {
+      const accepted = await verifyAccessCode(code);
+
+      if (accepted) {
+        try {
+          sessionStorage.setItem(ACCESS_STORAGE_KEY, "granted");
+        } catch {
+          // Access still works for the current page session.
+        }
+        setAccessCode("");
+        setAuthorized(true);
+      } else {
+        setAccessError("invalid");
+      }
+    } catch {
+      setAccessError("network");
+    } finally {
+      setAccessLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    try {
+      sessionStorage.removeItem(ACCESS_STORAGE_KEY);
+    } catch {
+      // Ignore unavailable session storage.
+    }
+
+    setMenuOpen(false);
+    setSignal(null);
+    setBacktest(null);
+    setSignalLoading(true);
+    setBacktestLoading(true);
+    setSignalError("");
+    setBacktestError("");
+    setAccessCode("");
+    setAccessError("");
+    setAuthorized(false);
+  };
+
+  if (!accessChecked) {
+    return <main style={{ minHeight: "100vh", background: "#000" }} />;
+  }
+
+  if (!authorized) {
+    const errorText =
+      accessError === "invalid"
+        ? t("invalidCode")
+        : accessError === "network"
+          ? t("accessNetworkError")
+          : "";
+
+    return (
+      <main
+        style={{
+          position: "fixed",
+          inset: 0,
+          overflowY: "auto",
+          background: "#000",
+          color: C.text,
+          fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
+          direction: language === "ar" ? "rtl" : "ltr",
+        }}
+      >
+        <div
+          aria-hidden="true"
+          style={{
+            position: "fixed",
+            inset: 0,
+            pointerEvents: "none",
+            overflow: "hidden",
+          }}
+        >
+          <div className="kl-glow" />
+          <div className="kl-grid" />
+
+          <svg
+            viewBox="0 0 1200 600"
+            preserveAspectRatio="xMidYMid slice"
+            width="100%"
+            height="100%"
+            style={{ position: "absolute", inset: 0, opacity: 0.6 }}
+          >
+            <defs>
+              <linearGradient id="kl-area" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#39ff88" stopOpacity="0.22" />
+                <stop offset="100%" stopColor="#39ff88" stopOpacity="0" />
+              </linearGradient>
+            </defs>
+
+            {[100, 200, 300, 400, 500].map((y) => (
+              <line
+                key={y}
+                x1="0"
+                x2="1200"
+                y1={y}
+                y2={y}
+                stroke="rgba(57,255,136,0.07)"
+                strokeWidth="1"
+              />
+            ))}
+
+            <path d={CHART_AREA_D} fill="url(#kl-area)" />
+
+            {CHART_CANDLES.map((c) => {
+              const color = c.up ? "#39ff88" : "#ff6577";
+              const top = Math.min(c.open, c.close);
+              const height = Math.max(Math.abs(c.open - c.close), 3);
+
+              return (
+                <g key={c.x} opacity={c.up ? 0.85 : 0.5}>
+                  <line
+                    x1={c.x}
+                    x2={c.x}
+                    y1={c.high}
+                    y2={c.low}
+                    stroke={color}
+                    strokeWidth="2"
+                  />
+                  <rect
+                    x={c.x - 7}
+                    y={top}
+                    width="14"
+                    height={height}
+                    rx="2"
+                    fill={color}
+                  />
+                </g>
+              );
+            })}
+
+            <path
+              className="kl-line"
+              d={CHART_LINE_D}
+              fill="none"
+              stroke="#7dffad"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              pathLength={1}
+            />
+
+            <line
+              x1="0"
+              x2="1200"
+              y1={CHART_LAST_Y}
+              y2={CHART_LAST_Y}
+              stroke={GOLD}
+              strokeWidth="1.5"
+              strokeDasharray="6 8"
+              opacity="0.8"
+            />
+            <text
+              x="1190"
+              y={CHART_LAST_Y - 10}
+              textAnchor="end"
+              fill={GOLD}
+              fontSize="16"
+              fontWeight="700"
+              letterSpacing="2"
+            >
+              XAU/USD
+            </text>
+          </svg>
+
+          <div className="kl-scan" />
+          <div className="kl-vignette" />
+        </div>
+
+        <div
+          style={{
+            position: "relative",
+            zIndex: 2,
+            minHeight: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "72px 16px 32px",
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              top: 16,
+              insetInlineEnd: 16,
+            }}
+          >
+            <select
+              aria-label={t("language")}
+              value={language}
+              onChange={(event) => setLanguage(event.target.value as Lang)}
+              style={{
+                padding: "9px 12px",
+                borderRadius: 10,
+                border: `1px solid ${C.border}`,
+                background: "rgba(0,0,0,0.7)",
+                color: C.text,
+                outline: "none",
+                fontSize: 12,
+                maxWidth: 190,
+              }}
+            >
+              {languages.map((item) => (
+                <option key={item.code} value={item.code}>
+                  {item.flag} {item.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <section
+            className="kl-card"
+            style={{
+              width: "100%",
+              maxWidth: 410,
+              borderRadius: 22,
+              padding: "34px 26px 26px",
+              background:
+                "linear-gradient(160deg, rgba(14,22,17,0.88), rgba(3,5,4,0.92))",
+              border: "1px solid rgba(57,255,136,0.28)",
+              boxShadow:
+                "0 0 0 1px rgba(212,175,55,0.14), 0 24px 80px rgba(0,0,0,0.75), 0 0 60px rgba(57,255,136,0.12)",
+              backdropFilter: "blur(14px)",
+              WebkitBackdropFilter: "blur(14px)",
+              position: "relative",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              aria-hidden="true"
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 24,
+                right: 24,
+                height: 2,
+                background: `linear-gradient(90deg, transparent, ${GOLD}, transparent)`,
+              }}
+            />
+
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+              <KLLogo size={68} gradientId="kl-neon-gate" />
+
+              <div
+                style={{
+                  marginTop: 16,
+                  fontSize: 22,
+                  fontWeight: 900,
+                  letterSpacing: 1.2,
+                }}
+              >
+                Keli<span style={{ color: C.green }}>Leli</span>bot
+              </div>
+
+              <div
+                style={{
+                  marginTop: 5,
+                  fontSize: 10,
+                  fontWeight: 700,
+                  letterSpacing: 3,
+                  color: GOLD,
+                }}
+              >
+                GOLD TRADING SYSTEM
+              </div>
+
+              <h1
+                style={{
+                  margin: "24px 0 8px",
+                  fontSize: 20,
+                  fontWeight: 850,
+                  letterSpacing: -0.2,
+                }}
+              >
+                {t("accessTitle")}
+              </h1>
+
+              <p
+                style={{
+                  margin: 0,
+                  color: C.muted,
+                  fontSize: 13,
+                  lineHeight: 1.6,
+                }}
+              >
+                {t("accessSubtitle")}
+              </p>
+            </div>
+
+            <form onSubmit={handleAccessSubmit} noValidate style={{ marginTop: 24 }}>
+              <label
+                htmlFor="access-code"
+                style={{ ...label, display: "block", marginBottom: 9, color: GOLD_SOFT }}
+              >
+                {t("accessCode")}
+              </label>
+
+              <input
+                id="access-code"
+                className="kl-input"
+                type="password"
+                value={accessCode}
+                onChange={(event) => {
+                  setAccessCode(event.target.value);
+                  if (accessError) setAccessError("");
+                }}
+                placeholder={t("accessPlaceholder")}
+                autoComplete="off"
+                autoCapitalize="off"
+                autoCorrect="off"
+                spellCheck={false}
+                disabled={accessLoading}
+                aria-invalid={accessError !== ""}
+                aria-describedby={errorText ? "access-error" : undefined}
+                style={{
+                  width: "100%",
+                  padding: "14px 15px",
+                  borderRadius: 12,
+                  border: `1px solid ${
+                    accessError ? "rgba(255,101,119,0.65)" : "rgba(57,255,136,0.28)"
+                  }`,
+                  background: "rgba(0,0,0,0.55)",
+                  color: C.text,
+                  fontSize: 15,
+                  letterSpacing: 1,
+                  outline: "none",
+                }}
+              />
+
+              <div
+                id="access-error"
+                role="alert"
+                aria-live="polite"
+                style={{
+                  minHeight: 20,
+                  marginTop: 10,
+                  color: C.red,
+                  fontSize: 12,
+                  lineHeight: 1.5,
+                  overflowWrap: "anywhere",
+                }}
+              >
+                {errorText}
+              </div>
+
+              <button
+                type="submit"
+                className="kl-enter"
+                disabled={accessLoading || accessCode.trim() === ""}
+                style={{
+                  width: "100%",
+                  marginTop: 8,
+                  padding: "14px 16px",
+                  borderRadius: 12,
+                  border: "1px solid rgba(125,255,173,0.7)",
+                  background: "linear-gradient(135deg, #7dffad, #39ff88)",
+                  color: "#03140a",
+                  fontSize: 14,
+                  fontWeight: 900,
+                  letterSpacing: 1.4,
+                  cursor: accessLoading ? "wait" : "pointer",
+                  opacity: accessLoading || accessCode.trim() === "" ? 0.6 : 1,
+                  boxShadow: "0 0 26px rgba(57,255,136,0.35)",
+                }}
+              >
+                {accessLoading ? t("verifying") : t("enter")}
+              </button>
+            </form>
+
+            <div
+              style={{
+                marginTop: 22,
+                textAlign: "center",
+                fontSize: 10,
+                letterSpacing: 2,
+                color: "#5d6b62",
+              }}
+            >
+              <span style={{ color: GOLD }}>KL</span> · XAU/USD
+            </div>
+          </section>
+        </div>
+
+        <style jsx global>{`
+          * {
+            box-sizing: border-box;
+          }
+
+          html,
+          body {
+            margin: 0;
+            background: #000;
+          }
+
+          button,
+          select,
+          input {
+            font: inherit;
+          }
+
+          .kl-glow {
+            position: absolute;
+            inset: 0;
+            background:
+              radial-gradient(ellipse at 50% 38%, rgba(57, 255, 136, 0.16), transparent 55%),
+              radial-gradient(ellipse at 85% 100%, rgba(212, 175, 55, 0.1), transparent 50%);
+          }
+
+          .kl-grid {
+            position: absolute;
+            inset: 0;
+            background-image:
+              linear-gradient(rgba(57, 255, 136, 0.045) 1px, transparent 1px),
+              linear-gradient(90deg, rgba(57, 255, 136, 0.045) 1px, transparent 1px);
+            background-size: 52px 52px;
+          }
+
+          .kl-vignette {
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(ellipse at center, transparent 35%, rgba(0, 0, 0, 0.85) 100%);
+          }
+
+          .kl-scan {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 140px;
+            background: linear-gradient(180deg, transparent, rgba(57, 255, 136, 0.07), transparent);
+            animation: klScan 7s linear infinite;
+          }
+
+          .kl-line {
+            stroke-dasharray: 1;
+            stroke-dashoffset: 1;
+            filter: drop-shadow(0 0 8px rgba(57, 255, 136, 0.9));
+            animation: klDraw 4.5s ease-out forwards;
+          }
+
+          .kl-card {
+            animation: klRise 700ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+          }
+
+          .kl-input::placeholder {
+            color: #5d6b62;
+            letter-spacing: 0;
+          }
+
+          .kl-input:focus {
+            border-color: rgba(57, 255, 136, 0.85) !important;
+            box-shadow: 0 0 0 3px rgba(57, 255, 136, 0.14), 0 0 22px rgba(57, 255, 136, 0.18);
+          }
+
+          .kl-enter:not(:disabled):hover {
+            filter: brightness(1.08);
+            transform: translateY(-1px);
+          }
+
+          .kl-enter:disabled {
+            cursor: not-allowed !important;
+          }
+
+          .kl-enter:focus-visible,
+          select:focus-visible {
+            outline: 2px solid ${GOLD};
+            outline-offset: 3px;
+          }
+
+          @keyframes klDraw {
+            to {
+              stroke-dashoffset: 0;
+            }
+          }
+
+          @keyframes klScan {
+            from {
+              transform: translateY(-160px);
+            }
+            to {
+              transform: translateY(110vh);
+            }
+          }
+
+          @keyframes klRise {
+            from {
+              opacity: 0;
+              transform: translateY(18px) scale(0.98);
+            }
+            to {
+              opacity: 1;
+              transform: translateY(0) scale(1);
+            }
+          }
+
+          @media (prefers-reduced-motion: reduce) {
+            .kl-scan {
+              animation: none;
+              display: none;
+            }
+
+            .kl-line {
+              animation: none;
+              stroke-dashoffset: 0;
+            }
+
+            .kl-card {
+              animation: none;
+            }
+          }
+        `}</style>
+      </main>
+    );
+  }
 
   const rawSignal = String(
     first(signal, "signal", "action", "recommendation", "type") ?? "WAIT"
@@ -872,71 +1618,7 @@ export default function Home() {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <svg
-              width="58"
-              height="58"
-              viewBox="0 0 100 100"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              style={{
-                flexShrink: 0,
-                filter: "drop-shadow(0 0 9px rgba(57,255,136,0.45))",
-              }}
-            >
-              <defs>
-                <linearGradient id="kl-neon" x1="0" y1="0" x2="1" y2="1">
-                  <stop offset="0%" stopColor="#7DFFAD" />
-                  <stop offset="100%" stopColor="#39FF88" />
-                </linearGradient>
-              </defs>
-              <rect
-                x="3"
-                y="3"
-                width="94"
-                height="94"
-                rx="24"
-                fill="#050706"
-                stroke="#39FF88"
-                strokeWidth="2"
-              />
-              <path
-                d="M50 13V22M43 13H57"
-                stroke="#39FF88"
-                strokeWidth="3"
-                strokeLinecap="round"
-              />
-              <path
-                d="M25 39Q25 29 36 29H64Q75 29 75 39V59Q75 69 64 69H36Q25 69 25 59Z"
-                fill="#101812"
-                stroke="url(#kl-neon)"
-                strokeWidth="2.5"
-              />
-              <rect x="34" y="40" width="11" height="11" rx="3" fill="#39FF88" />
-              <rect x="55" y="40" width="11" height="11" rx="3" fill="#39FF88" />
-              <path
-                d="M39 59H61"
-                stroke="#7DFFAD"
-                strokeWidth="3"
-                strokeLinecap="round"
-              />
-              <path
-                d="M18 42H25M75 42H82M18 55H25M75 55H82"
-                stroke="#39FF88"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-              <text
-                x="50"
-                y="86"
-                textAnchor="middle"
-                fill="#7DFFAD"
-                fontSize="14"
-                fontWeight="900"
-                letterSpacing="2"
-              >
-                KL
-              </text>
-            </svg>
+            <KLLogo size={58} gradientId="kl-neon" />
 
             <div>
               <div
@@ -1216,6 +1898,20 @@ export default function Home() {
               style={{ ...buttonStyle, width: "100%", marginTop: 15 }}
             >
               {t("done")}
+            </button>
+
+            <button
+              onClick={handleLogout}
+              style={{
+                ...buttonStyle,
+                width: "100%",
+                marginTop: 10,
+                color: C.red,
+                background: "rgba(255,101,119,0.06)",
+                border: "1px solid rgba(255,101,119,0.3)",
+              }}
+            >
+              {t("logout")}
             </button>
           </section>
         )}
