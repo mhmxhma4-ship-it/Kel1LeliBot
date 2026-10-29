@@ -6,6 +6,13 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 export const dynamic = "force-dynamic";
 
 const COOKIE_NAME = "keli_access";
+const PERMANENT_COOKIE_DAYS = 365;
+
+type SessionPayload = {
+  access: true;
+  expiresAt: string | null;
+  createdAt: number;
+};
 
 function signSession(value: string) {
   const secret = process.env.ACCESS_ADMIN_SECRET;
@@ -14,9 +21,7 @@ function signSession(value: string) {
     throw new Error("Mungon ACCESS_ADMIN_SECRET ne server.");
   }
 
-  return createHmac("sha256", secret)
-    .update(value)
-    .digest("hex");
+  return createHmac("sha256", secret).update(value).digest("hex");
 }
 
 function createSessionToken(expiresAt: string | null) {
@@ -25,40 +30,84 @@ function createSessionToken(expiresAt: string | null) {
       access: true,
       expiresAt,
       createdAt: Date.now(),
-    })
+    } satisfies SessionPayload)
   ).toString("base64url");
 
   return `${payload}.${signSession(payload)}`;
 }
 
-function verifySessionToken(token: string) {
+function readSessionToken(token: string): SessionPayload | null {
   try {
-    const [payload, signature] = token.split(".");
+    const separator = token.lastIndexOf(".");
+    if (separator <= 0) return null;
 
-    if (!payload || !signature) return false;
+    const payload = token.slice(0, separator);
+    const signature = token.slice(separator + 1);
+
+    if (!payload || !signature) return null;
 
     const expected = signSession(payload);
-    const a = Buffer.from(signature);
-    const b = Buffer.from(expected);
+    const a = Buffer.from(signature, "hex");
+    const b = Buffer.from(expected, "hex");
 
-    if (a.length !== b.length || !timingSafeEqual(a, b)) {
-      return false;
+    if (
+      a.length !== b.length ||
+      a.length === 0 ||
+      !timingSafeEqual(a, b)
+    ) {
+      return null;
     }
 
     const data = JSON.parse(
       Buffer.from(payload, "base64url").toString("utf8")
-    );
+    ) as Partial<SessionPayload>;
 
-    if (data.access !== true) return false;
-
-    if (data.expiresAt && Date.parse(data.expiresAt) <= Date.now()) {
-      return false;
+    if (
+      data.access !== true ||
+      typeof data.createdAt !== "number" ||
+      !Number.isFinite(data.createdAt)
+    ) {
+      return null;
     }
 
-    return true;
+    if (
+      data.expiresAt !== null &&
+      (typeof data.expiresAt !== "string" ||
+        !Number.isFinite(Date.parse(data.expiresAt)))
+    ) {
+      return null;
+    }
+
+    if (
+      typeof data.expiresAt === "string" &&
+      Date.parse(data.expiresAt) <= Date.now()
+    ) {
+      return null;
+    }
+
+    return {
+      access: true,
+      expiresAt: data.expiresAt ?? null,
+      createdAt: data.createdAt,
+    };
   } catch {
-    return false;
+    return null;
   }
+}
+
+function cookieOptions(expiresAt: string | null) {
+  return {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax" as const,
+    path: "/",
+    expires: expiresAt
+      ? new Date(expiresAt)
+      : new Date(
+          Date.now() +
+            PERMANENT_COOKIE_DAYS * 24 * 60 * 60 * 1000
+        ),
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -69,7 +118,10 @@ export async function POST(request: NextRequest) {
 
     if (!code || code.length > 100) {
       return NextResponse.json(
-        { success: false, error: "Shkruaj nje kod te vlefshem." },
+        {
+          success: false,
+          error: "Shkruaj nje kod te vlefshem.",
+        },
         { status: 400 }
       );
     }
@@ -81,12 +133,14 @@ export async function POST(request: NextRequest) {
         invalid: "Kodi nuk eshte i vlefshem.",
         paused: "Ky kod eshte pezulluar.",
         expired: "Ky kod ka skaduar.",
+        revoked: "Ky kod eshte anuluar.",
       };
 
       return NextResponse.json(
         {
           success: false,
-          error: messages[result.reason] ?? "Aksesi u refuzua.",
+          error:
+            messages[result.reason] ?? "Aksesi u refuzua.",
         },
         { status: 401 }
       );
@@ -94,21 +148,14 @@ export async function POST(request: NextRequest) {
 
     const response = NextResponse.json({
       success: true,
+      authorized: true,
       expiresAt: result.expiresAt,
     });
 
     response.cookies.set(
       COOKIE_NAME,
       createSessionToken(result.expiresAt),
-      {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === "production",
-        sameSite: "lax",
-        path: "/",
-        expires: result.expiresAt
-          ? new Date(result.expiresAt)
-          : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
-      }
+      cookieOptions(result.expiresAt)
     );
 
     return response;
@@ -116,7 +163,10 @@ export async function POST(request: NextRequest) {
     console.error("Access API error:", error);
 
     return NextResponse.json(
-      { success: false, error: "Gabim ne server. Provo perseri." },
+      {
+        success: false,
+        error: "Gabim ne server. Provo perseri.",
+      },
       { status: 500 }
     );
   }
@@ -126,15 +176,41 @@ export async function GET(request: NextRequest) {
   try {
     const token = request.cookies.get(COOKIE_NAME)?.value;
 
-    if (!token || !verifySessionToken(token)) {
+    if (!token) {
       return NextResponse.json(
         { authorized: false },
         { status: 401 }
       );
     }
 
-    return NextResponse.json({ authorized: true });
-  } catch {
+    const session = readSessionToken(token);
+
+    if (!session) {
+      const response = NextResponse.json(
+        { authorized: false },
+        { status: 401 }
+      );
+
+      response.cookies.set(COOKIE_NAME, "", {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "lax",
+        path: "/",
+        maxAge: 0,
+      });
+
+      return response;
+    }
+
+    return NextResponse.json({
+      authorized: true,
+      expiresAt: session.expiresAt,
+      createdAt: session.createdAt,
+      permanent: session.expiresAt === null,
+    });
+  } catch (error) {
+    console.error("Access session error:", error);
+
     return NextResponse.json(
       { authorized: false },
       { status: 401 }
