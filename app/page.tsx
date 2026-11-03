@@ -839,6 +839,15 @@ async function verifyAccessCode(code: string): Promise<AccessResult> {
   return { ok: true, expiresAt: parseExpiry(data) };
 }
 
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const raw = window.atob(base64);
+  const output = new Uint8Array(raw.length);
+  for (let i = 0; i < raw.length; i += 1) output[i] = raw.charCodeAt(i);
+  return output;
+}
+
 function MadaraLogo({ size = 58, gradientId = "kl-neon" }: { size?: number; gradientId?: string }) {
   return (
     <svg
@@ -883,6 +892,8 @@ export default function Home() {
   const [languageReady, setLanguageReady] = useState(false);
   const [selectedZone, setSelectedZone] = useState("Europe/Athens");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [pushState, setPushState] = useState<"unsupported" | "off" | "on" | "loading" | "error">("off");
+  const [pushMessage, setPushMessage] = useState("");
 
   const [accessChecked, setAccessChecked] = useState(false);
   const [authorized, setAuthorized] = useState(false);
@@ -1049,6 +1060,77 @@ export default function Home() {
       window.clearInterval(clockTimer);
     };
   }, [authorized, refreshSignal, refreshBacktest]);
+
+  useEffect(() => {
+    if (!authorized) return;
+    if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+      setPushState("unsupported");
+      return;
+    }
+    let cancelled = false;
+    navigator.serviceWorker.register("/sw.js")
+      .then((registration) => registration.pushManager.getSubscription())
+      .then((subscription) => {
+        if (!cancelled) setPushState(subscription ? "on" : "off");
+      })
+      .catch(() => { if (!cancelled) setPushState("error"); });
+    return () => { cancelled = true; };
+  }, [authorized]);
+
+  const togglePushNotifications = async () => {
+    if (pushState === "loading" || pushState === "unsupported") return;
+    setPushState("loading");
+    setPushMessage("");
+    try {
+      if (!("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) {
+        setPushState("unsupported");
+        setPushMessage("Ky shfletues nuk mbeshtet Web Push.");
+        return;
+      }
+      const registration = await navigator.serviceWorker.register("/sw.js");
+      const existing = await registration.pushManager.getSubscription();
+      if (existing) {
+        const response = await fetch("/api/push/subscribe", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: existing.endpoint }),
+        });
+        if (!response.ok) throw new Error("Nuk u caktivizua abonimi ne server.");
+        await existing.unsubscribe();
+        setPushState("off");
+        setPushMessage("Njoftimet u caktivizuan.");
+        return;
+      }
+      if (Notification.permission === "denied") {
+        throw new Error("Lejo njoftimet per MadaraBot nga Settings e iPhone.");
+      }
+      const permission = Notification.permission === "granted"
+        ? "granted"
+        : await Notification.requestPermission();
+      if (permission !== "granted") throw new Error("Nuk u dha leja per njoftime.");
+      const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!vapidKey) throw new Error("Mungon NEXT_PUBLIC_VAPID_PUBLIC_KEY ne Vercel.");
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(vapidKey),
+      });
+      const response = await fetch("/api/push/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(subscription),
+      });
+      if (!response.ok) {
+        await subscription.unsubscribe().catch(() => undefined);
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.error || "Nuk u ruajt abonimi ne server.");
+      }
+      setPushState("on");
+      setPushMessage("Njoftimet BUY/SELL u aktivizuan.");
+    } catch (error) {
+      setPushState("error");
+      setPushMessage(error instanceof Error ? error.message : "Gabim gjate aktivizimit.");
+    }
+  };
 
   const handleAccessSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -1841,7 +1923,24 @@ export default function Home() {
             </div>
           </div>
 
-          <button
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: "auto" }}>
+            <button
+              type="button"
+              onClick={togglePushNotifications}
+              disabled={pushState === "loading" || pushState === "unsupported"}
+              aria-label="Toggle push notifications"
+              style={{
+                border: `1px solid ${pushState === "on" ? "rgba(53,230,161,0.5)" : C.border}`,
+                background: pushState === "on" ? "rgba(53,230,161,0.12)" : "rgba(255,49,88,0.10)",
+                color: pushState === "on" ? C.green : C.gold2,
+                padding: "9px 10px", borderRadius: 10, cursor: pushState === "unsupported" ? "not-allowed" : "pointer",
+                fontSize: 11, fontWeight: 800, whiteSpace: "nowrap",
+              }}
+            >
+              {pushState === "loading" ? "..." : pushState === "on" ? "🔔 ON" : pushState === "unsupported" ? "PUSH N/A" : "🔔 PUSH"}
+            </button>
+
+            <button
             aria-label={menuOpen ? t("done") : t("menu")}
             title={t("menu")}
             onClick={() => setMenuOpen((value) => !value)}
@@ -1930,8 +2029,14 @@ export default function Home() {
                 />
               </>
             )}
-          </button>
+            </button>
+          </div>
         </header>
+        {pushMessage && (
+          <div role="status" style={{ ...panel, padding: "9px 12px", marginBottom: 12, fontSize: 12, color: pushState === "error" ? C.red : C.muted }}>
+            {pushMessage}
+          </div>
+        )}
 
         <nav className="mb-quick-nav mb-sticky-nav" aria-label="Dashboard navigation">
           <a href="#market-chart">CHART</a>
