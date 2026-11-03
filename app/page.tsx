@@ -636,20 +636,20 @@ const C = {
   bg: "#070b16",
   panel: "rgba(16, 27, 49, 0.66)",
   panel2: "rgba(22, 39, 67, 0.72)",
-  border: "rgba(74, 190, 255, 0.22)",
-  gold: "#38cfff",
-  gold2: "#9beaff",
+  border: "rgba(255, 55, 95, 0.25)",
+  gold: "#ff3158",
+  gold2: "#ff9aaa",
   text: "#edf7ff",
   muted: "#91a8c2",
   green: "#35e6a1",
   red: "#ff6487",
 };
 
-const GOLD = "#38cfff";
-const GOLD_SOFT = "#a7edff";
+const GOLD = "#ff3158";
+const GOLD_SOFT = "#ff9aaa";
 
 const panel: React.CSSProperties = {
-  background: "linear-gradient(145deg, rgba(19, 34, 59, 0.78), rgba(10, 19, 37, 0.72))",
+  background: "linear-gradient(145deg, rgba(49, 15, 28, 0.78), rgba(22, 10, 19, 0.78))",
   border: `1px solid ${C.border}`,
   borderRadius: 16,
   padding: 16,
@@ -1790,7 +1790,7 @@ export default function Home() {
 
   const buttonStyle: React.CSSProperties = {
     border: `1px solid ${C.border}`,
-    background: "rgba(212,175,55,0.08)",
+    background: "rgba(255,49,88,0.10)",
     color: C.gold2,
     padding: "10px 14px",
     borderRadius: 10,
@@ -1804,7 +1804,7 @@ export default function Home() {
       style={{
         minHeight: "100vh",
         background:
-          "radial-gradient(ellipse at 12% 0%, rgba(26, 151, 255, 0.19), transparent 34%), radial-gradient(ellipse at 88% 18%, rgba(80, 75, 255, 0.13), transparent 32%), linear-gradient(160deg, #070b16 0%, #0a1223 52%, #070b16 100%)",
+          "radial-gradient(ellipse at 12% 0%, rgba(255, 35, 78, 0.18), transparent 34%), radial-gradient(ellipse at 88% 18%, rgba(190, 20, 65, 0.16), transparent 32%), linear-gradient(160deg, #10070d 0%, #1b0a12 52%, #0b070b 100%)",
         color: C.text,
         padding: "14px 12px 24px",
         fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
@@ -1933,7 +1933,7 @@ export default function Home() {
           </button>
         </header>
 
-        <nav className="mb-quick-nav" aria-label="Dashboard navigation">
+        <nav className="mb-quick-nav mb-sticky-nav" aria-label="Dashboard navigation">
           <a href="#market-chart">CHART</a>
           <a href="#live-signal">SIGNAL</a>
           <a href="#performance">PERFORMANCE</a>
@@ -2069,7 +2069,7 @@ export default function Home() {
                 marginTop: 17,
                 padding: 13,
                 borderRadius: 11,
-                background: "rgba(57,255,136,0.05)",
+                background: "rgba(255,49,88,0.06)",
                 border: `1px solid ${C.border}`,
               }}
             >
@@ -2093,7 +2093,7 @@ export default function Home() {
                 marginTop: 17,
                 padding: 13,
                 borderRadius: 11,
-                background: "rgba(212,175,55,0.055)",
+                background: "rgba(255,49,88,0.07)",
                 border: `1px solid ${C.border}`,
               }}
             >
@@ -2185,14 +2185,6 @@ export default function Home() {
             {t("auto")}
           </span>
         </div>
-
-        <section id="market-chart" className="mb-chart-panel">
-          <div className="mb-section-heading">
-            <div><span className="mb-eyebrow">MARKET OVERVIEW</span><h2>XAU/USD <span>LIVE CHART</span></h2></div>
-            <span className="mb-live-pill"><i /> LIVE</span>
-          </div>
-          <GoldChart />
-        </section>
 
         <section id="live-signal" className="mb-signal-panel" style={{ ...panel, marginBottom: 20 }}>
           <div
@@ -2417,6 +2409,14 @@ export default function Home() {
           </div>
         </section>
 
+        <section id="market-chart" className="mb-chart-panel">
+          <div className="mb-section-heading">
+            <div><span className="mb-eyebrow">MARKET OVERVIEW</span><h2>XAU/USD <span>LIVE CHART</span></h2></div>
+            <span className="mb-live-pill"><i /> LIVE</span>
+          </div>
+          <GoldChart />
+        </section>
+
         <section id="performance" className="mb-performance-panel" style={{ ...panel, marginBottom: 20 }}>
           <div
             style={{
@@ -2588,7 +2588,7 @@ export default function Home() {
               style={{
                 color: C.gold2,
                 fontSize: 11,
-                background: "rgba(212,175,55,0.08)",
+                background: "rgba(255,49,88,0.10)",
                 border: `1px solid ${C.border}`,
                 borderRadius: 20,
                 padding: "7px 10px",
