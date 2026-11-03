@@ -633,27 +633,30 @@ const timeZones = [
 ];
 
 const C = {
-  bg: "#050706",
-  panel: "#0b100d",
-  panel2: "#101812",
-  border: "rgba(57,255,136,0.20)",
-  gold: "#39ff88",
-  gold2: "#7dffad",
-  text: "#f2fff6",
-  muted: "#899b8f",
-  green: "#39ff88",
-  red: "#ff6577",
+  bg: "#070b16",
+  panel: "rgba(16, 27, 49, 0.66)",
+  panel2: "rgba(22, 39, 67, 0.72)",
+  border: "rgba(74, 190, 255, 0.22)",
+  gold: "#38cfff",
+  gold2: "#9beaff",
+  text: "#edf7ff",
+  muted: "#91a8c2",
+  green: "#35e6a1",
+  red: "#ff6487",
 };
 
-const GOLD = "#d4af37";
-const GOLD_SOFT = "#f0d98a";
+const GOLD = "#38cfff";
+const GOLD_SOFT = "#a7edff";
 
 const panel: React.CSSProperties = {
-  background: "linear-gradient(145deg, #131417, #0d0e10)",
+  background: "linear-gradient(145deg, rgba(19, 34, 59, 0.78), rgba(10, 19, 37, 0.72))",
   border: `1px solid ${C.border}`,
-  borderRadius: 18,
-  padding: 20,
+  borderRadius: 16,
+  padding: 16,
   minWidth: 0,
+  boxShadow: "0 12px 34px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255,255,255,0.045)",
+  backdropFilter: "blur(18px)",
+  WebkitBackdropFilter: "blur(18px)",
 };
 
 const label: React.CSSProperties = {
@@ -1801,14 +1804,14 @@ export default function Home() {
       style={{
         minHeight: "100vh",
         background:
-          "radial-gradient(ellipse at 50% -10%, rgba(212,175,55,0.10), transparent 45%), #08090b",
+          "radial-gradient(ellipse at 12% 0%, rgba(26, 151, 255, 0.19), transparent 34%), radial-gradient(ellipse at 88% 18%, rgba(80, 75, 255, 0.13), transparent 32%), linear-gradient(160deg, #070b16 0%, #0a1223 52%, #070b16 100%)",
         color: C.text,
-        padding: "20px 16px 28px",
+        padding: "14px 12px 24px",
         fontFamily: "Inter, ui-sans-serif, system-ui, sans-serif",
         direction: language === "ar" ? "rtl" : "ltr",
       }}
     >
-      <div style={{ maxWidth: 1120, margin: "0 auto" }}>
+      <div className="kl-dashboard-shell" style={{ maxWidth: 1320, margin: "0 auto" }}>
         <header
           style={{
             display: "flex",
@@ -2737,11 +2740,53 @@ export default function Home() {
 
         html {
           background: ${C.bg};
+          color-scheme: dark;
         }
 
         body {
           margin: 0;
           background: ${C.bg};
+          background-image: radial-gradient(circle at 50% 0%, rgba(30, 140, 255, 0.08), transparent 42%);
+        }
+
+        .kl-dashboard-shell > header {
+          padding: 12px 15px;
+          border: 1px solid rgba(90, 190, 255, 0.18);
+          border-radius: 16px;
+          background: rgba(10, 20, 39, 0.72);
+          box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+          backdrop-filter: blur(18px);
+          -webkit-backdrop-filter: blur(18px);
+        }
+
+        .kl-dashboard-shell section {
+          box-shadow: 0 12px 34px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.035);
+          backdrop-filter: blur(18px);
+          -webkit-backdrop-filter: blur(18px);
+        }
+
+        .kl-dashboard-shell button {
+          transition: transform 150ms ease, border-color 150ms ease, background 150ms ease, box-shadow 150ms ease;
+        }
+
+        .kl-dashboard-shell button:active {
+          transform: scale(0.98);
+        }
+
+        .kl-dashboard-shell button:hover:not(:disabled) {
+          border-color: rgba(72, 205, 255, 0.55) !important;
+          box-shadow: 0 0 18px rgba(44, 180, 255, 0.10);
+        }
+
+        .kl-dashboard-shell table thead th {
+          background: rgba(50, 125, 190, 0.10);
+          color: #a9c9e6 !important;
+        }
+
+        @media (max-width: 640px) {
+          .kl-dashboard-shell { width: 100%; }
+          .kl-dashboard-shell > header { margin-bottom: 14px !important; }
+          .kl-dashboard-shell section { border-radius: 14px !important; }
         }
 
         button,
