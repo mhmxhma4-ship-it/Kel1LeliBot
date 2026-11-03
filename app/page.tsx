@@ -839,7 +839,7 @@ async function verifyAccessCode(code: string): Promise<AccessResult> {
   return { ok: true, expiresAt: parseExpiry(data) };
 }
 
-function KLLogo({ size = 58, gradientId = "kl-neon" }: { size?: number; gradientId?: string }) {
+function MadaraLogo({ size = 58, gradientId = "kl-neon" }: { size?: number; gradientId?: string }) {
   return (
     <svg
       width={size}
@@ -872,7 +872,7 @@ function KLLogo({ size = 58, gradientId = "kl-neon" }: { size?: number; gradient
       <path d="M39 59H61" stroke="#7DFFAD" strokeWidth="3" strokeLinecap="round" />
       <path d="M18 42H25M75 42H82M18 55H25M75 55H82" stroke="#39FF88" strokeWidth="2.5" strokeLinecap="round" />
       <text x="50" y="86" textAnchor="middle" fill="#7DFFAD" fontSize="14" fontWeight="900" letterSpacing="2">
-        KL
+        MB
       </text>
     </svg>
   );
@@ -1313,10 +1313,10 @@ export default function Home() {
               borderRadius: 22,
               padding: "34px 26px 26px",
               background:
-                "linear-gradient(160deg, rgba(14,22,17,0.88), rgba(3,5,4,0.92))",
-              border: "1px solid rgba(57,255,136,0.28)",
+                "linear-gradient(155deg, rgba(13,29,53,0.94), rgba(7,13,27,0.96))",
+              border: "1px solid rgba(69,190,255,0.34)",
               boxShadow:
-                "0 0 0 1px rgba(212,175,55,0.14), 0 24px 80px rgba(0,0,0,0.75), 0 0 60px rgba(57,255,136,0.12)",
+                "0 0 0 1px rgba(69,190,255,0.08), 0 24px 80px rgba(0,0,0,0.65), 0 0 55px rgba(34,145,255,0.14)",
               backdropFilter: "blur(14px)",
               WebkitBackdropFilter: "blur(14px)",
               position: "relative",
@@ -1331,12 +1331,12 @@ export default function Home() {
                 left: 24,
                 right: 24,
                 height: 2,
-                background: `linear-gradient(90deg, transparent, ${GOLD}, transparent)`,
+                background: "linear-gradient(90deg, transparent, #48cfff, #8a7dff, transparent)",
               }}
             />
 
             <div style={{ display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
-              <KLLogo size={68} gradientId="kl-neon-gate" />
+              <MadaraLogo size={68} gradientId="kl-neon-gate" />
 
               <div
                 style={{
@@ -1346,7 +1346,7 @@ export default function Home() {
                   letterSpacing: 1.2,
                 }}
               >
-                Keli<span style={{ color: C.green }}>Leli</span>bot
+                Madara<span style={{ color: C.green }}>Bot</span>
               </div>
 
               <div
@@ -1414,9 +1414,9 @@ export default function Home() {
                   padding: "14px 15px",
                   borderRadius: 12,
                   border: `1px solid ${
-                    accessError ? "rgba(255,101,119,0.65)" : "rgba(57,255,136,0.28)"
+                    accessError ? "rgba(255,101,119,0.65)" : "rgba(69,190,255,0.30)"
                   }`,
-                  background: "rgba(0,0,0,0.55)",
+                  background: "rgba(3,10,22,0.72)",
                   color: C.text,
                   fontSize: 15,
                   letterSpacing: 1,
@@ -1469,15 +1469,15 @@ export default function Home() {
                   marginTop: 8,
                   padding: "14px 16px",
                   borderRadius: 12,
-                  border: "1px solid rgba(125,255,173,0.7)",
-                  background: "linear-gradient(135deg, #7dffad, #39ff88)",
-                  color: "#03140a",
+                  border: "1px solid rgba(104,211,255,0.75)",
+                  background: "linear-gradient(135deg, #8ce7ff, #398dff)",
+                  color: "#04101e",
                   fontSize: 14,
                   fontWeight: 900,
                   letterSpacing: 1.4,
                   cursor: accessLoading ? "wait" : "pointer",
                   opacity: accessLoading || accessCode.trim() === "" ? 0.6 : 1,
-                  boxShadow: "0 0 26px rgba(57,255,136,0.35)",
+                  boxShadow: "0 0 26px rgba(49,160,255,0.30)",
                 }}
               >
                 {accessLoading ? t("verifying") : t("enter")}
@@ -1822,7 +1822,7 @@ export default function Home() {
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-            <KLLogo size={58} gradientId="kl-neon" />
+            <MadaraLogo size={58} gradientId="kl-neon" />
 
             <div>
               <div
@@ -1832,7 +1832,7 @@ export default function Home() {
                   letterSpacing: 1.1,
                 }}
               >
-                Keli<span style={{ color: C.gold }}>Leli</span>bot
+                Madara<span style={{ color: C.gold }}>Bot</span>
               </div>
 
               <div style={{ ...label, fontSize: 9, marginTop: 3 }}>
@@ -1932,6 +1932,13 @@ export default function Home() {
             )}
           </button>
         </header>
+
+        <nav className="mb-quick-nav" aria-label="Dashboard navigation">
+          <a href="#market-chart">CHART</a>
+          <a href="#live-signal">SIGNAL</a>
+          <a href="#performance">PERFORMANCE</a>
+          <a href="#trade-history">HISTORY</a>
+        </nav>
 
         {menuOpen && (
           <section
@@ -2179,9 +2186,15 @@ export default function Home() {
           </span>
         </div>
 
-        <GoldChart />
+        <section id="market-chart" className="mb-chart-panel">
+          <div className="mb-section-heading">
+            <div><span className="mb-eyebrow">MARKET OVERVIEW</span><h2>XAU/USD <span>LIVE CHART</span></h2></div>
+            <span className="mb-live-pill"><i /> LIVE</span>
+          </div>
+          <GoldChart />
+        </section>
 
-        <section style={{ ...panel, marginBottom: 20 }}>
+        <section id="live-signal" className="mb-signal-panel" style={{ ...panel, marginBottom: 20 }}>
           <div
             style={{
               display: "flex",
@@ -2404,7 +2417,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section style={{ ...panel, marginBottom: 20 }}>
+        <section id="performance" className="mb-performance-panel" style={{ ...panel, marginBottom: 20 }}>
           <div
             style={{
               display: "flex",
@@ -2546,7 +2559,7 @@ export default function Home() {
           </div>
         </section>
 
-        <section style={panel}>
+        <section id="trade-history" className="mb-history-panel" style={panel}>
           <div
             style={{
               display: "flex",
@@ -2724,7 +2737,7 @@ export default function Home() {
             letterSpacing: 2,
           }}
         >
-          <span style={{ color: C.gold }}>KL</span> KELILELIBOT · GOLD TRADING
+          <span style={{ color: C.gold }}>MB</span> MADARABOT · GOLD TRADING
           SYSTEM
 
           <div style={{ marginTop: 7, letterSpacing: 0.2 }}>
@@ -2783,10 +2796,51 @@ export default function Home() {
           color: #a9c9e6 !important;
         }
 
+        .mb-quick-nav {
+          display:flex; gap:8px; flex-wrap:wrap; margin:-7px 0 16px;
+        }
+        .mb-quick-nav a {
+          color:#9dbbd7; text-decoration:none; font-size:10px; font-weight:800;
+          letter-spacing:1px; padding:8px 12px; border-radius:999px;
+          border:1px solid rgba(90,190,255,.18); background:rgba(10,25,46,.58);
+          transition:all .16s ease;
+        }
+        .mb-quick-nav a:hover { color:#e7f8ff; border-color:rgba(72,205,255,.55); background:rgba(32,115,175,.18); }
+        .mb-chart-panel {
+          margin:0 0 18px; padding:15px; border-radius:18px;
+          border:1px solid rgba(75,180,255,.24);
+          background:linear-gradient(145deg,rgba(13,29,53,.88),rgba(7,14,29,.90));
+          box-shadow:0 16px 42px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.045);
+          backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+        }
+        .mb-section-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; margin:0 0 12px; }
+        .mb-eyebrow { color:#69cfff; font-size:9px; font-weight:900; letter-spacing:1.8px; }
+        .mb-section-heading h2 { margin:5px 0 0; color:#eef8ff; font-size:17px; letter-spacing:.3px; }
+        .mb-section-heading h2 span { color:#7c9fbd; font-size:10px; letter-spacing:1.3px; margin-left:5px; }
+        .mb-live-pill { display:inline-flex; align-items:center; gap:7px; color:#83e8c2; font-size:9px; font-weight:900; letter-spacing:1.2px; padding:7px 10px; border:1px solid rgba(76,220,173,.22); border-radius:999px; background:rgba(30,180,130,.08); }
+        .mb-live-pill i { width:6px; height:6px; border-radius:50%; background:#54e2b0; box-shadow:0 0 10px #54e2b0; }
+        .mb-signal-panel, .mb-performance-panel, .mb-history-panel {
+          border-color:rgba(87,171,231,.20) !important;
+          background:linear-gradient(150deg,rgba(13,27,49,.91),rgba(8,15,29,.94)) !important;
+        }
+        .mb-signal-panel { position:relative; overflow:hidden; }
+        .mb-signal-panel:before, .mb-performance-panel:before, .mb-history-panel:before {
+          content:""; display:block; height:1px; position:absolute; top:0; left:7%; right:7%;
+          background:linear-gradient(90deg,transparent,rgba(83,199,255,.55),transparent);
+        }
+        .mb-performance-panel, .mb-history-panel { position:relative; overflow:hidden; }
+        .mb-chart-panel > div:last-child { max-width:100%; }
+
         @media (max-width: 640px) {
           .kl-dashboard-shell { width: 100%; }
           .kl-dashboard-shell > header { margin-bottom: 14px !important; }
           .kl-dashboard-shell section { border-radius: 14px !important; }
+          .mb-quick-nav { overflow-x:auto; flex-wrap:nowrap; padding-bottom:3px; scrollbar-width:none; }
+          .mb-quick-nav::-webkit-scrollbar { display:none; }
+          .mb-quick-nav a { flex:0 0 auto; font-size:9px; padding:8px 10px; }
+          .mb-chart-panel { padding:10px; margin-bottom:13px; }
+          .mb-section-heading h2 { font-size:15px; }
+          .mb-signal-panel, .mb-performance-panel, .mb-history-panel { padding:14px !important; }
         }
 
         button,
