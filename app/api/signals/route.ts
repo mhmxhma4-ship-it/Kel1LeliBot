@@ -1,6 +1,7 @@
-
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "node:crypto";
+import webpush from "web-push";
+
 import { analyzeCandles, parseCandles } from "@/lib/strategy";
 import {
   analyzeMultiTimeframe,
@@ -132,6 +133,182 @@ function toSMCCandles(
   }));
 }
 
+/* ---------------------------------
+   MADARABOT PUSH NOTIFICATIONS
+---------------------------------- */
+
+function configurePush() {
+  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  const privateKey = process.env.VAPID_PRIVATE_KEY;
+  const subject = process.env.VAPID_SUBJECT;
+
+  if (!publicKey || !privateKey || !subject) {
+    return false;
+  }
+
+  webpush.setVapidDetails(subject, publicKey, privateKey);
+  return true;
+}
+
+async function claimNewSignal(
+  symbol: string,
+  signal: string,
+  latestCandleAt: string
+): Promise<boolean> {
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceKey) {
+    console.error("MadaraBot Push: Mungojne variablat Supabase.");
+    return false;
+  }
+
+  const response = await fetch(
+    `${supabaseUrl.replace(/\/$/, "")}/rest/v1/rpc/madarabot_claim_new_signal`,
+    {
+      method: "POST",
+      headers: {
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        p_symbol: symbol,
+        p_signal: signal,
+        p_latest_candle_at: latestCandleAt,
+      }),
+      cache: "no-store",
+    }
+  );
+
+  if (!response.ok) {
+    console.error(
+      "MadaraBot Push claim error:",
+      await response.text()
+    );
+    return false;
+  }
+
+  return response.json();
+}
+
+async function sendSignalPush(
+  signal: string,
+  price: number | null,
+  confidence: number | null,
+  latestCandleAt: string
+) {
+  if (signal !== "BUY" && signal !== "SELL") return;
+
+  if (!configurePush()) {
+    console.warn("MadaraBot Push: VAPID keys mungojne.");
+    return;
+  }
+
+  const supabaseUrl = process.env.SUPABASE_URL;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceKey) {
+    console.error("MadaraBot Push: Supabase nuk eshte konfiguruar.");
+    return;
+  }
+
+  try {
+    const isNewSignal = await claimNewSignal(
+      "XAU/USD",
+      signal,
+      latestCandleAt
+    );
+
+    if (!isNewSignal) return;
+
+    const subscriptionsResponse = await fetch(
+      `${supabaseUrl.replace(/\/$/, "")}/rest/v1/push_subscriptions?select=subscription,endpoint`,
+      {
+        headers: {
+          apikey: serviceKey,
+          Authorization: `Bearer ${serviceKey}`,
+        },
+        cache: "no-store",
+      }
+    );
+
+    if (!subscriptionsResponse.ok) {
+      console.error(
+        "MadaraBot Push subscriptions error:",
+        await subscriptionsResponse.text()
+      );
+      return;
+    }
+
+    const subscriptions = await subscriptionsResponse.json();
+
+    const title =
+      signal === "BUY"
+        ? "🟢 MadaraBot – BUY SIGNAL"
+        : "🔴 MadaraBot – SELL SIGNAL";
+
+    const payload = JSON.stringify({
+      title,
+      body: [
+        "XAU/USD",
+        price != null ? `Cmimi: $${price}` : null,
+        confidence != null ? `Confidence: ${confidence}%` : null,
+        "Hap MadaraBot per detaje.",
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      tag: `madarabot-${signal}-${latestCandleAt}`,
+      url: "/",
+    });
+
+    await Promise.allSettled(
+      subscriptions.map(
+        async (item: {
+          endpoint: string;
+          subscription: webpush.PushSubscription;
+        }) => {
+          try {
+            await webpush.sendNotification(
+              item.subscription,
+              payload
+            );
+          } catch (error: unknown) {
+            const statusCode =
+              typeof error === "object" &&
+              error !== null &&
+              "statusCode" in error
+                ? Number(error.statusCode)
+                : 0;
+
+            if (statusCode === 404 || statusCode === 410) {
+              await fetch(
+                `${supabaseUrl.replace(/\/$/, "")}/rest/v1/push_subscriptions?endpoint=eq.${encodeURIComponent(item.endpoint)}`,
+                {
+                  method: "DELETE",
+                  headers: {
+                    apikey: serviceKey,
+                    Authorization: `Bearer ${serviceKey}`,
+                  },
+                  cache: "no-store",
+                }
+              );
+            } else {
+              console.error("MadaraBot Push send error:", error);
+            }
+          }
+        }
+      )
+    );
+  } catch (error) {
+    console.error("MadaraBot Push error:", error);
+  }
+}
+
+/* ---------------------------------
+   SIGNAL API
+---------------------------------- */
+
 export async function GET(request: NextRequest) {
   if (!hasValidSession(request)) {
     return NextResponse.json(
@@ -216,6 +393,9 @@ export async function GET(request: NextRequest) {
       ...fetchErrors,
     ];
 
+    const latestCandleAt =
+      m5Candles[m5Candles.length - 1].datetime;
+
     const responseData = {
       symbol: "XAU/USD",
 
@@ -269,9 +449,17 @@ export async function GET(request: NextRequest) {
 
       interval: "multi-timeframe",
       updatedAt: new Date().toISOString(),
-      latestCandleAt:
-        m5Candles[m5Candles.length - 1].datetime,
+      latestCandleAt,
     };
+
+    // Dergo njoftim vetem kur sinjali BUY/SELL eshte i ri.
+    // Gabimet e Push nuk duhet te bllokojne API e sinjaleve.
+    await sendSignalPush(
+      String(multiTimeframe.signal),
+      roundToTwo(baseResult.price),
+      roundToTwo(multiTimeframe.confidence),
+      latestCandleAt
+    );
 
     return NextResponse.json(responseData, {
       headers: {
