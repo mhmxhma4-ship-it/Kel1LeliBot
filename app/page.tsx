@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 
+import GoldChart from "@/components/GoldChart";
+
 type Lang =
   | "sq" | "en" | "el" | "it" | "es" | "pt" | "fr"
   | "de" | "tr" | "ar" | "ru" | "pt-BR" | "ja" | "zh";
@@ -2173,6 +2175,8 @@ export default function Home() {
             {t("auto")}
           </span>
         </div>
+
+        <GoldChart />
 
         <section style={{ ...panel, marginBottom: 20 }}>
           <div
