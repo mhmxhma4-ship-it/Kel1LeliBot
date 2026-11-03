@@ -6,6 +6,7 @@ import {
   analyzeMultiTimeframe,
   Timeframe,
 } from "@/lib/multi-timeframe";
+import { analyzeSMC, SMCCandle } from "@/lib/smc";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -21,7 +22,9 @@ const INTERVALS: Record<Timeframe, string> = {
   H4: "4h",
 };
 
-function roundToTwo(value: number | null | undefined): number | null {
+function roundToTwo(
+  value: number | null | undefined
+): number | null {
   if (value == null || !Number.isFinite(value)) return null;
   return Number(value.toFixed(2));
 }
@@ -73,7 +76,9 @@ async function fetchTimeframe(
   timeframe: Timeframe,
   apiKey: string
 ) {
-  const url = new URL("https://api.twelvedata.com/time_series");
+  const url = new URL(
+    "https://api.twelvedata.com/time_series"
+  );
 
   url.searchParams.set("symbol", "XAU/USD");
   url.searchParams.set("interval", INTERVALS[timeframe]);
@@ -94,7 +99,8 @@ async function fetchTimeframe(
   ) {
     throw new Error(
       `${timeframe}: ${
-        data.message || "Nuk u moren te dhenat nga Twelve Data."
+        data.message ||
+        "Nuk u moren te dhenat nga Twelve Data."
       }`
     );
   }
@@ -113,10 +119,26 @@ async function fetchTimeframe(
   );
 }
 
+function toSMCCandles(
+  candles: Awaited<ReturnType<typeof fetchTimeframe>>
+): SMCCandle[] {
+  return candles.map((candle) => ({
+    time: Date.parse(candle.datetime),
+    open: candle.open,
+    high: candle.high,
+    low: candle.low,
+    close: candle.close,
+    volume: candle.volume,
+  }));
+}
+
 export async function GET(request: NextRequest) {
   if (!hasValidSession(request)) {
     return NextResponse.json(
-      { error: "Duhet nje kod aktiv per te pare sinjalet." },
+      {
+        error:
+          "Duhet nje kod aktiv per te pare sinjalet.",
+      },
       { status: 401 }
     );
   }
@@ -145,7 +167,10 @@ export async function GET(request: NextRequest) {
       M15: [],
       H1: [],
       H4: [],
-    } as Record<Timeframe, Awaited<ReturnType<typeof fetchTimeframe>>>;
+    } as Record<
+      Timeframe,
+      Awaited<ReturnType<typeof fetchTimeframe>>
+    >;
 
     const fetchErrors: string[] = [];
 
@@ -183,6 +208,9 @@ export async function GET(request: NextRequest) {
 
     const baseResult = analyzeCandles(m5Candles);
 
+    const smcCandles = toSMCCandles(m5Candles);
+    const smc = analyzeSMC(smcCandles);
+
     const warnings = [
       ...multiTimeframe.warnings,
       ...fetchErrors,
@@ -217,6 +245,21 @@ export async function GET(request: NextRequest) {
       timeframes: multiTimeframe.timeframes,
       entry: multiTimeframe.entry,
 
+      smc: {
+        ...smc,
+        events: smc.events.slice(-20),
+        orderBlocks: smc.orderBlocks.map((zone) => ({
+          ...zone,
+          high: roundToTwo(zone.high),
+          low: roundToTwo(zone.low),
+        })),
+        fairValueGaps: smc.fairValueGaps.map((zone) => ({
+          ...zone,
+          high: roundToTwo(zone.high),
+          low: roundToTwo(zone.low),
+        })),
+      },
+
       candlesReceived: {
         M5: candlesByTimeframe.M5.length,
         M15: candlesByTimeframe.M15.length,
@@ -244,7 +287,7 @@ export async function GET(request: NextRequest) {
         error:
           error instanceof Error
             ? error.message
-            : "Gabim gjate marrjes se te dhenave nga Twelve Data.",
+            : "Gabim gjate analizes se tregut.",
       },
       { status: 500 }
     );
