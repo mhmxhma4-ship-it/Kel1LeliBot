@@ -839,13 +839,13 @@ async function verifyAccessCode(code: string): Promise<AccessResult> {
   return { ok: true, expiresAt: parseExpiry(data) };
 }
 
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
+function urlBase64ToUint8Array(base64String: string): ArrayBuffer {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
   const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
   const raw = window.atob(base64);
-  const output = new Uint8Array(raw.length);
+  const output = new Uint8Array(new ArrayBuffer(raw.length));
   for (let i = 0; i < raw.length; i += 1) output[i] = raw.charCodeAt(i);
-  return output;
+  return output.buffer;
 }
 
 function MadaraLogo({ size = 58, gradientId = "kl-neon" }: { size?: number; gradientId?: string }) {
