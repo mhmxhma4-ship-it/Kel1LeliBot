@@ -1,3 +1,4 @@
+
 import { NextRequest, NextResponse } from "next/server";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import webpush from "web-push";
@@ -21,6 +22,11 @@ const INTERVALS: Record<Timeframe, string> = {
   M15: "15min",
   H1: "1h",
   H4: "4h",
+};
+
+type GoldPriceResult = {
+  price: number;
+  updatedAt: string | null;
 };
 
 function roundToTwo(
@@ -73,6 +79,10 @@ function hasValidSession(request: NextRequest): boolean {
   }
 }
 
+/* ---------------------------------
+   TWELVE DATA - HISTORICAL CANDLES
+---------------------------------- */
+
 async function fetchTimeframe(
   timeframe: Timeframe,
   apiKey: string
@@ -118,6 +128,44 @@ async function fetchTimeframe(
     (a, b) =>
       Date.parse(a.datetime) - Date.parse(b.datetime)
   );
+}
+
+/* ---------------------------------
+   GOLD API - LIVE XAU/USD PRICE
+---------------------------------- */
+
+async function fetchGoldLivePrice(): Promise<GoldPriceResult> {
+  const response = await fetch(
+    "https://api.gold-api.com/price/XAU",
+    {
+      next: { revalidate: 30 },
+      signal: AbortSignal.timeout(8000),
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      `Gold API u pergjigj me status ${response.status}.`
+    );
+  }
+
+  const data = await response.json();
+
+  const price = Number(data.price);
+
+  if (!Number.isFinite(price) || price <= 0) {
+    throw new Error(
+      "Gold API nuk ktheu nje cmim XAU/USD te vlefshem."
+    );
+  }
+
+  return {
+    price,
+    updatedAt:
+      typeof data.updatedAt === "string"
+        ? data.updatedAt
+        : null,
+  };
 }
 
 function toSMCCandles(
@@ -333,11 +381,27 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Gold API dhe Twelve Data merren paralelisht.
+    const livePricePromise = fetchGoldLivePrice().then(
+      (result) => ({
+        result,
+        error: null as string | null,
+      })
+    ).catch((error: unknown) => ({
+      result: null,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Gold API nuk mund te kontaktohet.",
+    }));
+
     const results = await Promise.allSettled(
       TIMEFRAMES.map((timeframe) =>
         fetchTimeframe(timeframe, apiKey)
       )
     );
+
+    const livePriceResponse = await livePricePromise;
 
     const candlesByTimeframe = {
       M5: [],
@@ -385,6 +449,11 @@ export async function GET(request: NextRequest) {
 
     const baseResult = analyzeCandles(m5Candles);
 
+    // Nese Gold API deshton, perdorim close e qiririt te fundit.
+    const livePrice = livePriceResponse.result;
+    const displayedPrice =
+      livePrice?.price ?? baseResult.price;
+
     const smcCandles = toSMCCandles(m5Candles);
     const smc = analyzeSMC(smcCandles);
 
@@ -392,6 +461,12 @@ export async function GET(request: NextRequest) {
       ...multiTimeframe.warnings,
       ...fetchErrors,
     ];
+
+    if (livePriceResponse.error) {
+      warnings.push(
+        `Gold API: ${livePriceResponse.error} Po perdoret cmimi i fundit nga Twelve Data.`
+      );
+    }
 
     const latestCandleAt =
       m5Candles[m5Candles.length - 1].datetime;
@@ -401,11 +476,13 @@ export async function GET(request: NextRequest) {
 
       ...baseResult,
 
+      // Cmimi kryesor merret nga Gold API.
+      price: roundToTwo(displayedPrice),
+
       signal: multiTimeframe.signal,
       confidence: multiTimeframe.confidence,
       reason: multiTimeframe.reason,
 
-      price: roundToTwo(baseResult.price),
       stopLoss: roundToTwo(baseResult.stopLoss),
       takeProfit1: roundToTwo(baseResult.takeProfit1),
       takeProfit2: roundToTwo(baseResult.takeProfit2),
@@ -424,6 +501,12 @@ export async function GET(request: NextRequest) {
 
       timeframes: multiTimeframe.timeframes,
       entry: multiTimeframe.entry,
+
+      priceSource: livePrice
+        ? "Gold API"
+        : "Twelve Data fallback",
+
+      livePriceUpdatedAt: livePrice?.updatedAt ?? null,
 
       smc: {
         ...smc,
@@ -453,10 +536,9 @@ export async function GET(request: NextRequest) {
     };
 
     // Dergo njoftim vetem kur sinjali BUY/SELL eshte i ri.
-    // Gabimet e Push nuk duhet te bllokojne API e sinjaleve.
     await sendSignalPush(
       String(multiTimeframe.signal),
-      roundToTwo(baseResult.price),
+      roundToTwo(displayedPrice),
       roundToTwo(multiTimeframe.confidence),
       latestCandleAt
     );
