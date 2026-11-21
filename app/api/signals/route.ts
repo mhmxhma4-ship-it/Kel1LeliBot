@@ -97,7 +97,8 @@ async function fetchTimeframe(
   url.searchParams.set("apikey", apiKey);
 
   const response = await fetch(url.toString(), {
-    cache: "no-store",
+    next: { revalidate: 60 },
+    signal: AbortSignal.timeout(15000),
   });
 
   const data = await response.json();
@@ -471,6 +472,29 @@ export async function GET(request: NextRequest) {
     const latestCandleAt =
       m5Candles[m5Candles.length - 1].datetime;
 
+    // Nivelet e hyrjes ndjekin sinjalin final MTF, jo sinjalin M5 te vecante.
+    const finalSignal = multiTimeframe.signal;
+    const entryPrice = displayedPrice;
+    const atr = baseResult.atr;
+    const stopDistance =
+      finalSignal !== "WAIT" && atr !== null && atr > 0
+        ? atr * 1.5
+        : null;
+    const direction =
+      finalSignal === "BUY" ? 1 : finalSignal === "SELL" ? -1 : 0;
+    const stopLoss =
+      stopDistance !== null
+        ? roundToTwo(entryPrice - direction * stopDistance)
+        : null;
+    const takeProfit1 =
+      stopDistance !== null
+        ? roundToTwo(entryPrice + direction * stopDistance)
+        : null;
+    const takeProfit2 =
+      stopDistance !== null
+        ? roundToTwo(entryPrice + direction * stopDistance * 2)
+        : null;
+
     const responseData = {
       symbol: "XAU/USD",
 
@@ -479,14 +503,14 @@ export async function GET(request: NextRequest) {
       // Cmimi kryesor merret nga Gold API.
       price: roundToTwo(displayedPrice),
 
-      signal: multiTimeframe.signal,
+      signal: finalSignal,
       confidence: multiTimeframe.confidence,
       reason: multiTimeframe.reason,
 
-      stopLoss: roundToTwo(baseResult.stopLoss),
-      takeProfit1: roundToTwo(baseResult.takeProfit1),
-      takeProfit2: roundToTwo(baseResult.takeProfit2),
-      takeProfit: roundToTwo(baseResult.takeProfit),
+      stopLoss,
+      takeProfit1,
+      takeProfit2,
+      takeProfit: takeProfit2,
 
       ema9: roundToTwo(baseResult.ema9),
       ema21: roundToTwo(baseResult.ema21),

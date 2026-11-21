@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
     url.searchParams.set("apikey", apiKey);
 
     const response = await fetch(url.toString(), {
-      cache: "no-store",
+      next: { revalidate: 300 },
       signal: AbortSignal.timeout(15000),
     });
 
@@ -204,8 +204,8 @@ export async function GET(request: NextRequest) {
 
     const trades: Trade[] = [];
 
-    const totalCostBpsPerRoundTrip =
-      2 * (costBpsPerSide + slippageBpsPerSide);
+    // Slippage modelohet ne cmimet e ekzekutimit; ketu llogaritet vetem spread/kosto.
+    const totalCostBpsPerRoundTrip = 2 * costBpsPerSide;
 
     function updateDrawdown() {
       peakEquity = Math.max(peakEquity, equity);
@@ -247,8 +247,12 @@ export async function GET(request: NextRequest) {
 
       const remainingFraction = tp1Hit ? 1 - tp1CloseFraction : 1;
 
+      const adjustedExitPrice =
+        rawExitPrice *
+        (1 - position * (slippageBpsPerSide / 10000));
+
       const finalGrossPct =
-        ((position * (rawExitPrice - entryPrice)) / entryPrice) * 100;
+        ((position * (adjustedExitPrice - entryPrice)) / entryPrice) * 100;
 
       const combinedGrossPct = tp1Hit
         ? tp1GrossPct * tp1CloseFraction +
@@ -279,10 +283,6 @@ export async function GET(request: NextRequest) {
       } else {
         breakeven++;
       }
-
-      const adjustedExitPrice =
-        rawExitPrice *
-        (1 - position * (slippageBpsPerSide / 10000));
 
       trades.push({
         side: position === 1 ? "BUY" : "SELL",
@@ -418,7 +418,7 @@ export async function GET(request: NextRequest) {
           tp1Hits++;
           tp2Hits++;
           tp1GrossPct =
-            ((position * (takeProfit1Price - entryPrice)) / entryPrice) * 100;
+            ((position * ((takeProfit1Price * (1 - position * (slippageBpsPerSide / 10000))) - entryPrice)) / entryPrice) * 100;
           closePosition(executionCandle.open, executionTime, "TP1_THEN_TP2");
         } else {
           tp2Hits++;
@@ -432,7 +432,7 @@ export async function GET(request: NextRequest) {
         tp1Hits++;
         tp1Time = executionTime;
         tp1GrossPct =
-          ((position * (takeProfit1Price - entryPrice)) / entryPrice) * 100;
+          ((position * ((takeProfit1Price * (1 - position * (slippageBpsPerSide / 10000))) - entryPrice)) / entryPrice) * 100;
       }
 
       const hitStop =
@@ -452,7 +452,8 @@ export async function GET(request: NextRequest) {
           : executionCandle.low <= takeProfit2Price;
 
       if (hitStop && !tp1Hit && hitTP1) {
-        closePosition(executionCandle.open, executionTime, "STOP_LOSS");
+        // Nese i njejti qiri prek SL dhe TP1, zgjedhim SL si skenarin konservator.
+        closePosition(stopLossPrice, executionTime, "STOP_LOSS");
         continue;
       }
 
@@ -479,7 +480,7 @@ export async function GET(request: NextRequest) {
         tp1Hits++;
         tp1Time = executionTime;
         tp1GrossPct =
-          ((position * (takeProfit1Price - entryPrice)) / entryPrice) * 100;
+          ((position * ((takeProfit1Price * (1 - position * (slippageBpsPerSide / 10000))) - entryPrice)) / entryPrice) * 100;
       }
 
       if (hitTP2) {
@@ -487,7 +488,7 @@ export async function GET(request: NextRequest) {
           tp1Hit = true;
           tp1Hits++;
           tp1GrossPct =
-            ((position * (takeProfit1Price - entryPrice)) / entryPrice) * 100;
+            ((position * ((takeProfit1Price * (1 - position * (slippageBpsPerSide / 10000))) - entryPrice)) / entryPrice) * 100;
         }
 
         tp2Hits++;
